@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="background">#263238</color>
+    <color name="text">#f0fffeee</color>
+    <color name="circle">#c0ffff8d</color>
+    <color name="backgroundImageAmbientTint">#16344b</color>
+</resources>
