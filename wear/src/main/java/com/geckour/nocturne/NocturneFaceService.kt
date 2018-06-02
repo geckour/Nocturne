@@ -6,6 +6,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.content.res.ColorStateList
 import android.graphics.*
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Message
@@ -14,10 +15,7 @@ import android.support.wearable.watchface.CanvasWatchFaceService
 import android.support.wearable.watchface.WatchFaceService
 import android.support.wearable.watchface.WatchFaceStyle
 import android.util.Size
-import android.view.LayoutInflater
-import android.view.SurfaceHolder
-import android.view.View
-import android.view.WindowManager
+import android.view.*
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
@@ -30,14 +28,14 @@ import java.lang.ref.WeakReference
 import java.util.*
 import kotlin.math.abs
 
-class MainWatchFaceService : CanvasWatchFaceService() {
+class NocturneFaceService : CanvasWatchFaceService() {
 
     companion object {
         /**
          * Updates rate in milliseconds for interactive mode. We update once a second since seconds
          * are displayed in interactive mode.
          */
-        private const val INTERACTIVE_UPDATE_RATE_MS = 100
+        private const val INTERACTIVE_UPDATE_RATE_MS = 50
 
         /**
          * Handler message id for updating the time periodically in interactive mode.
@@ -52,8 +50,8 @@ class MainWatchFaceService : CanvasWatchFaceService() {
 
     override fun onCreateEngine(): Engine = Engine()
 
-    private class EngineHandler(reference: MainWatchFaceService.Engine) : Handler() {
-        private val weakReference: WeakReference<MainWatchFaceService.Engine> = WeakReference(reference)
+    private class EngineHandler(reference: NocturneFaceService.Engine) : Handler() {
+        private val weakReference: WeakReference<NocturneFaceService.Engine> = WeakReference(reference)
 
         override fun handleMessage(msg: Message) {
             val engine = weakReference.get()
@@ -94,7 +92,8 @@ class MainWatchFaceService : CanvasWatchFaceService() {
 
                             val alarmTime = dataMap.getLong(KEY_ALARM_TIME)
                             try {
-                                info.nextAlarmTime = Calendar.getInstance().apply { timeInMillis = alarmTime }
+                                info.nextAlarmTime =
+                                        Calendar.getInstance().apply { timeInMillis = alarmTime }
                             } catch (t: Throwable) {
                                 Timber.e(t)
                             }
@@ -115,13 +114,23 @@ class MainWatchFaceService : CanvasWatchFaceService() {
         override fun onCreate(holder: SurfaceHolder) {
             super.onCreate(holder)
 
-            setWatchFaceStyle(WatchFaceStyle.Builder(this@MainWatchFaceService)
-                    .setAcceptsTapEvents(true)
-                    .build())
+            setWatchFaceStyle(
+                    WatchFaceStyle.Builder(this@NocturneFaceService).apply {
+                        if (Build.VERSION.SDK_INT < 24) {
+                            setShowSystemUiTime(false)
+                            setAmbientPeekMode(WatchFaceStyle.AMBIENT_PEEK_MODE_HIDDEN)
+                        }
+                        setStatusBarGravity(Gravity.LEFT or Gravity.TOP)
+                        setAcceptsTapEvents(true)
+                    }.build())
 
-            layout = getSystemService(LayoutInflater::class.java).inflate(R.layout.face_main, null)
+            layout = getSystemService(LayoutInflater::class.java)
+                    .inflate(R.layout.face_main, null)
 
-            val displaySize = Point().apply { getSystemService(WindowManager::class.java).defaultDisplay.getSize(this) }
+            val displaySize = Point().apply {
+                getSystemService(WindowManager::class.java).defaultDisplay
+                        .getSize(this)
+            }
             spec = Size(
                     View.MeasureSpec.makeMeasureSpec(displaySize.x, View.MeasureSpec.EXACTLY),
                     View.MeasureSpec.makeMeasureSpec(displaySize.y, View.MeasureSpec.EXACTLY)
@@ -214,7 +223,11 @@ class MainWatchFaceService : CanvasWatchFaceService() {
                 draw(canvas)
 
                 if (info.isAmbient.not()) {
-                    val circleRect = RectF(measuredWidth * 0.04f, measuredHeight * 0.04f, measuredWidth * 0.96f, measuredHeight * 0.96f)
+                    val circleRect = RectF(
+                            measuredWidth * 0.04f,
+                            measuredHeight * 0.04f,
+                            measuredWidth * 0.96f,
+                            measuredHeight * 0.96f)
                     val paint = Paint().apply {
                         strokeWidth = 8f
                         style = Paint.Style.STROKE
@@ -222,15 +235,24 @@ class MainWatchFaceService : CanvasWatchFaceService() {
                         isAntiAlias = true
                     }
 
-                    if (info.now.get(Calendar.SECOND) + info.now.get(Calendar.MILLISECOND) / 1000f < INTERACTIVE_UPDATE_RATE_MS * 0.001) {
+                    val minute = info.now.get(Calendar.MINUTE)
+                    val second = info.now.get(Calendar.SECOND)
+                    val milli = info.now.get(Calendar.MILLISECOND)
+                    val secondF: Float = second + milli * 0.001f
+                    val isOdd = minute % 2 == 1
+
+                    if (isOdd && secondF < INTERACTIVE_UPDATE_RATE_MS * 0.001) {
                         canvas.drawCircle(circleRect.centerX(), circleRect.centerY(), circleRect.width() / 2, paint)
                     } else {
-                        canvas.drawArc(
-                                circleRect,
-                                -90f,
-                                (info.now.get(Calendar.SECOND) + info.now.get(Calendar.MILLISECOND) / 1000f) * 360f / 60,
-                                false,
-                                paint)
+                        var startAngle = -90f
+                        var sweepAngle = secondF * 360 / 60
+
+                        if (isOdd) {
+                            sweepAngle = 360f - sweepAngle
+                            startAngle = -90f - sweepAngle
+                        }
+
+                        canvas.drawArc(circleRect, startAngle, sweepAngle, false, paint)
                     }
                 }
             }
@@ -257,22 +279,22 @@ class MainWatchFaceService : CanvasWatchFaceService() {
         }
 
         private fun registerReceiver() {
-            Wearable.getDataClient(this@MainWatchFaceService).addListener(onDataChanged)
+            Wearable.getDataClient(this@NocturneFaceService).addListener(onDataChanged)
 
             if (timeZoneReceiverRegistered) return
 
             timeZoneReceiverRegistered = true
             val filter = IntentFilter(Intent.ACTION_TIMEZONE_CHANGED)
-            this@MainWatchFaceService.registerReceiver(timeZoneReceiver, filter)
+            this@NocturneFaceService.registerReceiver(timeZoneReceiver, filter)
         }
 
         private fun unregisterReceiver() {
-            Wearable.getDataClient(this@MainWatchFaceService).removeListener(onDataChanged)
+            Wearable.getDataClient(this@NocturneFaceService).removeListener(onDataChanged)
 
             if (timeZoneReceiverRegistered.not()) return
 
             timeZoneReceiverRegistered = false
-            this@MainWatchFaceService.unregisterReceiver(timeZoneReceiver)
+            this@NocturneFaceService.unregisterReceiver(timeZoneReceiver)
         }
 
         /**

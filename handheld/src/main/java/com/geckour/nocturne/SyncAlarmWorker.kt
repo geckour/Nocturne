@@ -6,7 +6,6 @@ import androidx.work.Worker
 import com.google.android.gms.wearable.PutDataMapRequest
 import com.google.android.gms.wearable.Wearable
 import kotlinx.coroutines.experimental.async
-import timber.log.Timber
 
 class SyncAlarmWorker : Worker() {
 
@@ -19,7 +18,6 @@ class SyncAlarmWorker : Worker() {
         val alarmInfo = try {
             applicationContext.getSystemService(AlarmManager::class.java).nextAlarmClock
         } catch (t: Throwable) {
-            Timber.e(t)
             null
         } ?: return WorkerResult.FAILURE
 

@@ -1,3 +1,8 @@
 <resources>
     <string name="app_name">Nocturne</string>
+
+    <string name="setting_sync_alarm">Sync next alarm time with Wear\'s Nocturne watch face</string>
+
+    <string name="summary_on">ON</string>
+    <string name="summary_off">OFF</string>
 </resources>
