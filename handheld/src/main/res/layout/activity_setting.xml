@@ -14,10 +14,20 @@
         android:background="@color/colorPrimary"
         android:elevation="5dp"
         android:title="@string/app_name"
-        android:titleTextColor="@color/colorAccent"
+        android:titleTextColor="@color/colorText"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"/>
+
+    <ImageView
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:adjustViewBounds="true"
+        android:scaleType="centerCrop"
+        android:src="@drawable/wave"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"/>
 
     <TextView
         android:id="@+id/subscribe_sync_alarm"
@@ -27,7 +37,7 @@
         android:layout_marginStart="16dp"
         android:layout_marginTop="16dp"
         android:text="@string/setting_sync_alarm"
-        android:textColor="@color/colorAccent"
+        android:textColor="@color/colorText"
         android:textSize="16sp"
         app:layout_constraintEnd_toStartOf="@id/switch_sync_alarm"
         app:layout_constraintStart_toStartOf="parent"
@@ -48,7 +58,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_margin="8dp"
-        android:textColor="@color/colorAccent"
+        android:textColor="@color/colorText"
         android:textSize="14sp"
         app:layout_constraintStart_toStartOf="@id/subscribe_sync_alarm"
         app:layout_constraintTop_toBottomOf="@id/subscribe_sync_alarm"

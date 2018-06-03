@@ -4,11 +4,15 @@ import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
+import android.net.Uri
 import android.os.Bundle
 import android.preference.PreferenceManager
+import android.util.Log
 import androidx.work.PeriodicWorkRequest
 import androidx.work.WorkManager
+import com.google.android.gms.wearable.Wearable
 import kotlinx.android.synthetic.main.activity_setting.*
+import kotlinx.coroutines.experimental.async
 import java.util.*
 import java.util.concurrent.TimeUnit
 
@@ -37,6 +41,7 @@ class SettingActivity : Activity() {
                         getString(if (checked) R.string.summary_on else R.string.summary_off)
 
                 if (checked) setWork()
+                else clearSync()
             }
 
             isChecked = getSwitchState(PREF_KEY_SWITCH_STATE_SYNC_ALARM)
@@ -50,12 +55,25 @@ class SettingActivity : Activity() {
                 PeriodicWorkRequest.Builder(
                         SyncAlarmWorker::class.java,
                         1L,
-                        TimeUnit.MINUTES).build().apply { workerId = id }
+                        TimeUnit.MINUTES
+                ).build().apply { workerId = id }
 
         WorkManager.getInstance().apply {
-            workerId?.also { this.cancelWorkById(it) }
+            cancelWork(this)
             enqueue(syncAlarmWork)
         }
+    }
+
+    private fun cancelWork(workManager: WorkManager = WorkManager.getInstance()) {
+        workerId?.apply { workManager.cancelWorkById(this) }
+    }
+
+    private fun clearSync() {
+        async {
+            Wearable.getDataClient(applicationContext)
+                    .deleteDataItems(Uri.parse("wear://${SyncAlarmWorker.WEAR_PATH_ALARM_TIME}"))
+        }
+        cancelWork()
     }
 
     private fun getSwitchState(key: String, default: Boolean = false): Boolean =

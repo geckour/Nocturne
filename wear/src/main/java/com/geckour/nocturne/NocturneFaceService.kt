@@ -19,14 +19,13 @@ import android.view.*
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
-import com.google.android.gms.wearable.DataEvent
-import com.google.android.gms.wearable.DataEventBuffer
-import com.google.android.gms.wearable.DataMapItem
-import com.google.android.gms.wearable.Wearable
+import com.google.android.gms.wearable.*
 import timber.log.Timber
 import java.lang.ref.WeakReference
 import java.util.*
 import kotlin.math.abs
+import kotlin.math.max
+import kotlin.math.min
 
 class NocturneFaceService : CanvasWatchFaceService() {
 
@@ -223,11 +222,12 @@ class NocturneFaceService : CanvasWatchFaceService() {
                 draw(canvas)
 
                 if (info.isAmbient.not()) {
+                    val longerSideLength = max(measuredWidth, measuredHeight)
                     val circleRect = RectF(
-                            measuredWidth * 0.04f,
-                            measuredHeight * 0.04f,
-                            measuredWidth * 0.96f,
-                            measuredHeight * 0.96f)
+                            longerSideLength * 0.04f,
+                            longerSideLength * 0.04f,
+                            longerSideLength * 0.96f,
+                            longerSideLength * 0.96f)
                     val paint = Paint().apply {
                         strokeWidth = 8f
                         style = Paint.Style.STROKE
@@ -328,7 +328,7 @@ class NocturneFaceService : CanvasWatchFaceService() {
         }
 
         private fun Calendar.getAlarmString(): String =
-                "%02d:%02d(%s)".format(get(Calendar.HOUR_OF_DAY), get(Calendar.MINUTE), Info.getDayString(get(Calendar.DAY_OF_WEEK)))
+                "%02d:%02d(%s)".format(get(Calendar.HOUR_OF_DAY), get(Calendar.MINUTE), Info.getDayString(applicationContext, get(Calendar.DAY_OF_WEEK)))
 
         private fun Calendar.getPrimaryTimeString(): String =
                 "%02d:%02d".format(get(Calendar.HOUR_OF_DAY), get(Calendar.MINUTE))
@@ -337,7 +337,7 @@ class NocturneFaceService : CanvasWatchFaceService() {
                 "%02d".format(get(Calendar.SECOND))
 
         private fun Calendar.getDateString(): String =
-                "%02d/%02d/%02d(%s)".format(get(Calendar.YEAR) % 100, get(Calendar.MONTH), get(Calendar.DATE), Info.getDayString(get(Calendar.DAY_OF_WEEK)))
+                "%02d/%02d/%02d(%s)".format(get(Calendar.YEAR) % 100, get(Calendar.MONTH), get(Calendar.DATE), Info.getDayString(applicationContext, get(Calendar.DAY_OF_WEEK)))
 
         private fun Info.getBackgroundColor(): Int =
                 if (isAmbient) Color.BLACK

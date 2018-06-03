@@ -13,20 +13,44 @@ android {
         applicationId "com.geckour.nocturne"
         minSdkVersion 24
         targetSdkVersion 27
-        versionCode 1
+        versionCode 11
         versionName "1.0.0"
 
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
 
     }
 
-    buildTypes {
+    signingConfigs {
+        debug {
+            keyAlias 'AndroidDebugKey'
+            keyPassword 'android'
+            storeFile file("${project.rootDir}/signing/debug.keystore")
+            storePassword 'android'
+        }
         release {
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            def releaseSettingGradleFile = new File("${project.rootDir}/signing/release.gradle")
+            if (releaseSettingGradleFile.exists()) {
+                apply from: releaseSettingGradleFile, to: android
+            } else {
+                throw new GradleException("Missing ${releaseSettingGradleFile.getAbsolutePath()} . Generate the file by copying and modifying ${project.rootDir}/signing/release.gradle.sample .")
+            }
         }
     }
 
+    buildTypes {
+        release {
+            minifyEnabled true
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.release
+        }
+    }
+
+    flavorDimensions 'distribute'
+
+    productFlavors {
+        wear1 { dimension 'distribute' }
+        wear2 { dimension 'distribute' }
+    }
 }
 
 dependencies {
