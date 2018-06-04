@@ -328,7 +328,7 @@ class NocturneFaceService : CanvasWatchFaceService() {
         }
 
         private fun Calendar.getAlarmString(): String =
-                "%02d:%02d(%s)".format(get(Calendar.HOUR_OF_DAY), get(Calendar.MINUTE), Info.getDayString(applicationContext, get(Calendar.DAY_OF_WEEK)))
+                "%02d:%02d(%s)".format(get(Calendar.HOUR_OF_DAY), get(Calendar.MINUTE), getDayString())
 
         private fun Calendar.getPrimaryTimeString(): String =
                 "%02d:%02d".format(get(Calendar.HOUR_OF_DAY), get(Calendar.MINUTE))
@@ -337,10 +337,22 @@ class NocturneFaceService : CanvasWatchFaceService() {
                 "%02d".format(get(Calendar.SECOND))
 
         private fun Calendar.getDateString(): String =
-                "%02d/%02d/%02d(%s)".format(get(Calendar.YEAR) % 100, get(Calendar.MONTH), get(Calendar.DATE), Info.getDayString(applicationContext, get(Calendar.DAY_OF_WEEK)))
+                "%02d/%02d/%02d(%s)".format(get(Calendar.YEAR) % 100, get(Calendar.MONTH), get(Calendar.DATE), getDayString())
 
         private fun Info.getBackgroundColor(): Int =
                 if (isAmbient) Color.BLACK
                 else ContextCompat.getColor(applicationContext, R.color.background)
+
+        private fun Calendar.getDayString(): String? =
+                when (get(Calendar.DAY_OF_WEEK)) {
+                    Calendar.MONDAY -> applicationContext.getString(R.string.day_mon)
+                    Calendar.TUESDAY -> applicationContext.getString(R.string.day_tue)
+                    Calendar.WEDNESDAY -> applicationContext.getString(R.string.day_wed)
+                    Calendar.THURSDAY -> applicationContext.getString(R.string.day_thu)
+                    Calendar.FRIDAY -> applicationContext.getString(R.string.day_fri)
+                    Calendar.SATURDAY -> applicationContext.getString(R.string.day_sat)
+                    Calendar.SUNDAY -> applicationContext.getString(R.string.day_sun)
+                    else -> null
+                }
     }
 }
