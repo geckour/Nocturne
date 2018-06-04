@@ -19,13 +19,15 @@ import android.view.*
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
-import com.google.android.gms.wearable.*
+import com.google.android.gms.wearable.DataEvent
+import com.google.android.gms.wearable.DataEventBuffer
+import com.google.android.gms.wearable.DataMapItem
+import com.google.android.gms.wearable.Wearable
 import timber.log.Timber
 import java.lang.ref.WeakReference
 import java.util.*
 import kotlin.math.abs
 import kotlin.math.max
-import kotlin.math.min
 
 class NocturneFaceService : CanvasWatchFaceService() {
 
@@ -207,11 +209,13 @@ class NocturneFaceService : CanvasWatchFaceService() {
                     }
                 }
                 findViewById<TextView>(R.id.date).text = info.now.getDateString()
-                findViewById<ImageView>(R.id.image_background).apply {
-                    translationY =
-                            measuredHeight * (0.25f + abs(14 - (info.now.moonAge()
-                            ?: 0)).toFloat() * 0.65f / 14)
-                    imageTintList =
+                findViewById<ImageView>(R.id.image_background).also {
+                    val scale = measuredWidth.toFloat() / measuredHeight
+                    it.scaleX = scale
+                    it.scaleY = scale
+                    it.translationY = it.measuredHeight *
+                            (0.25f + abs(14 - (info.now.moonAge() ?: 14)).toFloat() * 0.65f / 14)
+                    it.imageTintList =
                             if (info.isAmbient)
                                 ColorStateList.valueOf(ContextCompat.getColor(applicationContext,
                                         R.color.backgroundImageAmbientTint))
