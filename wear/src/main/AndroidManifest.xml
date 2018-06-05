@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest package="com.geckour.nocturne"
-          xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.geckour.nocturne">
 
-    <uses-feature android:name="android.hardware.type.watch"/>
+    <uses-feature android:name="android.hardware.type.watch" />
 
     <!-- Required to act as a custom watch face. -->
-    <uses-permission android:name="android.permission.WAKE_LOCK"/>
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
     <!-- Required for complications to receive complication data and open the provider chooser. -->
-    <uses-permission android:name="com.google.android.wearable.permission.RECEIVE_COMPLICATION_DATA"/>
+    <uses-permission android:name="com.google.android.wearable.permission.RECEIVE_COMPLICATION_DATA" />
 
     <application
         android:name=".App"
@@ -18,11 +18,11 @@
         android:theme="@android:style/Theme.DeviceDefault">
         <meta-data
             android:name="com.google.android.wearable.standalone"
-            android:value="true"/>
+            android:value="true" />
 
         <uses-library
             android:name="com.google.android.wearable"
-            android:required="true"/>
+            android:required="true" />
 
         <service
             android:name=".NocturneFaceService"
@@ -30,21 +30,21 @@
             android:permission="android.permission.BIND_WALLPAPER">
             <meta-data
                 android:name="android.service.wallpaper"
-                android:resource="@xml/watch_face"/>
+                android:resource="@xml/watch_face" />
             <meta-data
                 android:name="com.google.android.wearable.watchface.preview"
-                android:resource="@drawable/preview_main"/>
+                android:resource="@drawable/preview_main" />
             <meta-data
                 android:name="com.google.android.wearable.watchface.preview_circular"
-                android:resource="@drawable/preview_main_circular"/>
+                android:resource="@drawable/preview_main_circular" />
             <meta-data
                 android:name="com.google.android.wearable.watchface.companionConfigurationAction"
-                android:value="com.example.android.wearable.watchface.CONFIG_DIGITAL"/>
+                android:value="com.example.android.wearable.watchface.CONFIG_DIGITAL" />
 
             <intent-filter>
-                <action android:name="android.service.wallpaper.WallpaperService"/>
+                <action android:name="android.service.wallpaper.WallpaperService" />
 
-                <category android:name="com.google.android.wearable.watchface.category.WATCH_FACE"/>
+                <category android:name="com.google.android.wearable.watchface.category.WATCH_FACE" />
             </intent-filter>
         </service>
     </application>

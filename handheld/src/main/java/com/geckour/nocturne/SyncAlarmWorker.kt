@@ -1,9 +1,7 @@
 package com.geckour.nocturne
 
 import android.app.AlarmManager
-import android.net.Uri
 import androidx.work.Worker
-import com.google.android.gms.tasks.Task
 import com.google.android.gms.wearable.PutDataMapRequest
 import com.google.android.gms.wearable.Wearable
 import kotlinx.coroutines.experimental.async
@@ -20,7 +18,7 @@ class SyncAlarmWorker : Worker() {
             applicationContext.getSystemService(AlarmManager::class.java).nextAlarmClock
         } catch (t: Throwable) {
             null
-        } ?: return WorkerResult.FAILURE
+        } ?: return WorkerResult.RETRY
 
         pushAlarmTime(alarmInfo.triggerTime)
 
