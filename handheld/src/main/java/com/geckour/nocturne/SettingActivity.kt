@@ -1,22 +1,18 @@
 package com.geckour.nocturne
 
-import android.app.Activity
-import android.content.Context
-import android.content.Intent
 import android.content.SharedPreferences
 import android.net.Uri
 import android.os.Bundle
 import android.preference.PreferenceManager
-import android.util.Log
 import androidx.work.PeriodicWorkRequest
 import androidx.work.WorkManager
 import com.google.android.gms.wearable.Wearable
 import kotlinx.android.synthetic.main.activity_setting.*
-import kotlinx.coroutines.experimental.async
+import kotlinx.coroutines.launch
 import java.util.*
 import java.util.concurrent.TimeUnit
 
-class SettingActivity : Activity() {
+class SettingActivity : ScopedActivity() {
 
     companion object {
         private const val PREF_KEY_SWITCH_STATE_SYNC_ALARM = "pref_key_switch_state_sync_alarm"
@@ -69,7 +65,7 @@ class SettingActivity : Activity() {
     }
 
     private fun clearSync() {
-        async {
+        launch {
             Wearable.getDataClient(applicationContext)
                     .deleteDataItems(Uri.parse("wear://${SyncAlarmWorker.WEAR_PATH_ALARM_TIME}"))
         }

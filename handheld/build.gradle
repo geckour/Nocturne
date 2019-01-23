@@ -4,19 +4,17 @@ apply plugin: 'kotlin-android'
 
 apply plugin: 'kotlin-android-extensions'
 
-kotlin.experimental.coroutines 'enable'
-
 android {
-    compileSdkVersion 27
+    compileSdkVersion 28
 
     defaultConfig {
         applicationId "com.geckour.nocturne"
+        targetSdkVersion 28
         minSdkVersion 24
-        targetSdkVersion 27
-        versionCode 21
-        versionName "1.0.1"
+        versionCode 31
+        versionName "1.0.2"
 
-        testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
     }
 
@@ -54,21 +52,20 @@ android {
 }
 
 dependencies {
-    def android_support_version = '27.1.1'
-    def coroutines_version = '0.19.3'
-    def work_version = '1.0.0-alpha02'
+    def coroutines_version = '1.0.1'
+    def work_version = '1.0.0-beta02'
 
     wearApp project(':wear')
 
     implementation fileTree(dir: 'libs', include: ['*.jar'])
 
-    implementation 'com.google.android.gms:play-services-wearable:15.0.1'
-    implementation "com.android.support:support-v4:$android_support_version"
-    implementation "com.android.support:appcompat-v7:$android_support_version"
-    implementation 'com.android.support.constraint:constraint-layout:1.1.0'
+    implementation 'com.google.android.gms:play-services-wearable:16.0.1'
+    implementation 'androidx.legacy:legacy-support-v4:1.0.0'
+    implementation 'androidx.appcompat:appcompat:1.1.0-alpha01'
+    implementation 'androidx.constraintlayout:constraintlayout:2.0.0-alpha3'
     testImplementation 'junit:junit:4.12'
-    androidTestImplementation 'com.android.support.test:runner:1.0.2'
-    androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.2'
+    androidTestImplementation 'androidx.test:runner:1.1.1'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.1.1'
 
     // Coroutines
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutines_version"
@@ -76,4 +73,5 @@ dependencies {
 
     //AAC
     implementation "android.arch.work:work-runtime:$work_version"
+    implementation "android.arch.work:work-runtime-ktx:$work_version"
 }

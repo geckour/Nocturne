@@ -10,7 +10,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Message
-import android.support.v4.content.ContextCompat
+import androidx.core.content.ContextCompat
 import android.support.wearable.watchface.CanvasWatchFaceService
 import android.support.wearable.watchface.WatchFaceService
 import android.support.wearable.watchface.WatchFaceStyle
@@ -214,7 +214,7 @@ class NocturneFaceService : CanvasWatchFaceService() {
                     it.scaleX = scale
                     it.scaleY = scale
                     it.translationY = it.measuredHeight *
-                            (0.25f + abs(14 - (info.now.moonAge() ?: 14)).toFloat() * 0.65f / 14)
+                            (0.25f + abs(14 - (info.now.moonAge())).toFloat() * 0.65f / 14)
                     it.imageTintList =
                             if (info.isAmbient)
                                 ColorStateList.valueOf(ContextCompat.getColor(applicationContext,
@@ -341,7 +341,7 @@ class NocturneFaceService : CanvasWatchFaceService() {
                 "%02d".format(get(Calendar.SECOND))
 
         private fun Calendar.getDateString(): String =
-                "%02d/%02d/%02d(%s)".format(get(Calendar.YEAR) % 100, get(Calendar.MONTH), get(Calendar.DATE), getDayString())
+                "%02d/%02d/%02d(%s)".format(get(Calendar.YEAR) % 100, get(Calendar.MONTH) + 1, get(Calendar.DATE), getDayString())
 
         private fun Info.getBackgroundColor(): Int =
                 if (isAmbient) Color.BLACK

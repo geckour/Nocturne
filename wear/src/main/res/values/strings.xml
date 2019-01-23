@@ -1,7 +1,7 @@
 <resources>
     <string name="app_name" translatable="false">Nocturne</string>
     <string name="face_name" translatable="false">Nocturne</string>
-    <string name="message_moonage">Moon age: %1$d</string>
+    <string name="message_moonage">Moon age: %1$.2f</string>
     <string name="day_mon">Mon</string>
     <string name="day_tue">Tue</string>
     <string name="day_wed">Wed</string>
