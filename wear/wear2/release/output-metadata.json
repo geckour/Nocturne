@@ -1,0 +1,20 @@
+{
+  "version": 3,
+  "artifactType": {
+    "type": "APK",
+    "kind": "Directory"
+  },
+  "applicationId": "com.geckour.nocturne",
+  "variantName": "wear2Release",
+  "elements": [
+    {
+      "type": "SINGLE",
+      "filters": [],
+      "attributes": [],
+      "versionCode": 330100002,
+      "versionName": "1.0.2",
+      "outputFile": "wear-wear2-release.apk"
+    }
+  ],
+  "elementType": "File"
+}
