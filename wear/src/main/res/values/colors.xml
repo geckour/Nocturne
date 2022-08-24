@@ -3,5 +3,6 @@
     <color name="background">#263238</color>
     <color name="text">#f0fffeee</color>
     <color name="circle">#c0ffff8d</color>
+    <color name="wave">#0272B3</color>
     <color name="backgroundImageAmbientTint">#16344b</color>
 </resources>

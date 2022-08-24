@@ -43,12 +43,13 @@
         app:layout_constraintGuide_percent="0.7518" />
 
     <ImageView
-        android:id="@+id/image_background"
+        android:id="@+id/wave"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:adjustViewBounds="true"
         android:scaleType="fitCenter"
         android:src="@drawable/background"
+        android:tint="@color/backgroundImageAmbientTint"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -101,8 +102,8 @@
         android:textColor="@color/text"
         android:textSize="16sp"
         app:fontFamily="@font/fira_mono"
-        app:layout_constraintBottom_toTopOf="@id/date"
         app:layout_constraintEnd_toEndOf="@id/time_primary"
+        app:layout_constraintTop_toBottomOf="@id/time_primary"
         tools:text="07" />
 
     <androidx.appcompat.widget.AppCompatTextView

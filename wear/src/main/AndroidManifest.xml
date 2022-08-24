@@ -26,6 +26,7 @@
 
         <service
             android:name=".NocturneFaceService"
+            android:exported="false"
             android:label="@string/face_name"
             android:permission="android.permission.BIND_WALLPAPER">
             <meta-data
@@ -39,7 +40,7 @@
                 android:resource="@drawable/preview_main_circular" />
             <meta-data
                 android:name="com.google.android.wearable.watchface.companionConfigurationAction"
-                android:value="com.example.android.wearable.watchface.CONFIG_DIGITAL" />
+                android:value="com.geckour.nocturne.CONFIG_ANALOG" />
 
             <intent-filter>
                 <action android:name="android.service.wallpaper.WallpaperService" />

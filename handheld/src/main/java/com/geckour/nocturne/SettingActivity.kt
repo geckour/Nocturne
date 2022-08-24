@@ -3,7 +3,9 @@ package com.geckour.nocturne
 import android.content.SharedPreferences
 import android.net.Uri
 import android.os.Bundle
-import android.preference.PreferenceManager
+import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
+import androidx.preference.PreferenceManager
 import androidx.work.PeriodicWorkRequest
 import androidx.work.WorkManager
 import com.google.android.gms.wearable.Wearable
@@ -12,7 +14,7 @@ import kotlinx.coroutines.launch
 import java.util.*
 import java.util.concurrent.TimeUnit
 
-class SettingActivity : ScopedActivity() {
+class SettingActivity : AppCompatActivity() {
 
     companion object {
         private const val PREF_KEY_SWITCH_STATE_SYNC_ALARM = "pref_key_switch_state_sync_alarm"
@@ -26,7 +28,7 @@ class SettingActivity : ScopedActivity() {
 
         setContentView(R.layout.activity_setting)
 
-        setActionBar(toolbar)
+        setSupportActionBar(toolbar)
 
         sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this)
 
@@ -50,11 +52,11 @@ class SettingActivity : ScopedActivity() {
         val syncAlarmWork =
                 PeriodicWorkRequest.Builder(
                         SyncAlarmWorker::class.java,
-                        1L,
+                        15,
                         TimeUnit.MINUTES
                 ).build().apply { workerId = id }
 
-        WorkManager.getInstance().apply {
+        WorkManager.getInstance(this).apply {
             cancelWork(this)
             enqueue(syncAlarmWork)
         }
@@ -65,7 +67,7 @@ class SettingActivity : ScopedActivity() {
     }
 
     private fun clearSync() {
-        launch {
+        lifecycleScope.launch {
             Wearable.getDataClient(applicationContext)
                     .deleteDataItems(Uri.parse("wear://${SyncAlarmWorker.WEAR_PATH_ALARM_TIME}"))
         }

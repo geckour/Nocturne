@@ -2,6 +2,7 @@ package com.geckour.nocturne
 
 import android.app.AlarmManager
 import android.content.Context
+import androidx.core.content.getSystemService
 import androidx.work.Worker
 import androidx.work.WorkerParameters
 import com.google.android.gms.wearable.PutDataMapRequest
@@ -15,24 +16,22 @@ class SyncAlarmWorker(context: Context, parameters: WorkerParameters) : Worker(c
     }
 
     override fun doWork(): Result {
-        val alarmInfo = try {
-            applicationContext.getSystemService(AlarmManager::class.java).nextAlarmClock
+        val nextAlarmTriggerTime = try {
+            applicationContext.getSystemService<AlarmManager>()?.nextAlarmClock?.triggerTime
         } catch (t: Throwable) {
             null
         } ?: return Result.retry()
 
-        pushAlarmTime(alarmInfo.triggerTime)
+        pushAlarmTime(nextAlarmTriggerTime)
 
         return Result.success()
     }
 
     private fun pushAlarmTime(time: Long) {
         Wearable.getDataClient(applicationContext).putDataItem(
-                PutDataMapRequest.create(WEAR_PATH_ALARM_TIME).apply {
-                    dataMap.apply {
-                        putLong(WEAR_KEY_ALARM_TIME, time)
-                    }
-                }.asPutDataRequest()
+                PutDataMapRequest.create(WEAR_PATH_ALARM_TIME)
+                    .apply { dataMap.putLong(WEAR_KEY_ALARM_TIME, time) }
+                    .asPutDataRequest()
         )
     }
 }
