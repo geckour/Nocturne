@@ -12,25 +12,9 @@ import androidx.wear.watchface.WatchFaceService
 import androidx.wear.watchface.WatchFaceType
 import androidx.wear.watchface.WatchState
 import androidx.wear.watchface.style.CurrentUserStyleRepository
-import com.google.android.gms.wearable.DataClient
-import com.google.android.gms.wearable.DataEvent
-import com.google.android.gms.wearable.DataEventBuffer
-import com.google.android.gms.wearable.DataMapItem
-import timber.log.Timber
-import java.time.LocalDateTime
-import java.time.ZoneId
-import java.time.ZoneOffset
 import java.time.ZonedDateTime
 
-class NocturneFaceService : WatchFaceService(), DataClient.OnDataChangedListener {
-
-    companion object {
-
-        private const val PATH_ALARM_TIME = "/path_alarm_time"
-        private const val KEY_ALARM_TIME = "value"
-    }
-
-    private val info = Info(null)
+class NocturneFaceService : WatchFaceService() {
 
     override suspend fun createWatchFace(
         surfaceHolder: SurfaceHolder,
@@ -72,35 +56,5 @@ class NocturneFaceService : WatchFaceService(), DataClient.OnDataChangedListener
                 }
             }
         })
-    }
-
-    override fun onDataChanged(dataEventBuffer: DataEventBuffer) {
-        dataEventBuffer.forEach { dataEvent ->
-            when (dataEvent.type) {
-                DataEvent.TYPE_CHANGED -> {
-                    if (dataEvent.dataItem.uri.path?.compareTo(PATH_ALARM_TIME) == 0) {
-                        val dataMap = DataMapItem.fromDataItem(dataEvent.dataItem).dataMap
-
-                        val alarmTime = dataMap.getLong(KEY_ALARM_TIME).apply { Timber.d("ngeck alarm time: $this") }
-                        try {
-                            info.nextAlarmTime = ZonedDateTime.of(
-                                LocalDateTime.ofEpochSecond(alarmTime, 0, ZoneOffset.of(ZoneOffset.systemDefault().id)),
-                                ZoneId.systemDefault()
-                            )
-                        } catch (t: Throwable) {
-                            Timber.e(t)
-                        }
-                    }
-                }
-
-                DataEvent.TYPE_DELETED -> {
-                    try {
-                        info.nextAlarmTime = null
-                    } catch (t: Throwable) {
-                        Timber.e(t)
-                    }
-                }
-            }
-        }
     }
 }

@@ -53,8 +53,6 @@ class NocturneWatchCanvasRenderer(
     true
 ) {
 
-    private val info = Info(null)
-
     private val spec: Size = Point().apply { context.getSystemService<WindowManager>()?.defaultDisplay?.getSize(this) }
         .let {
             Size(
@@ -110,12 +108,6 @@ class NocturneWatchCanvasRenderer(
             layout.apply {
                 measure(spec.width, spec.height)
                 layout(0, 0, measuredWidth, measuredHeight)
-
-                val alarmVisibility = if (info.nextAlarmTime == null) View.GONE else View.VISIBLE
-                findViewById<View>(R.id.icon_alarm).visibility = alarmVisibility
-                val alarmText = findViewById<TextView>(R.id.text_alarm)
-                alarmText.visibility = alarmVisibility
-                alarmText.text = info.nextAlarmTime?.getAlarmString()
                 findViewById<TextView>(R.id.time_primary).text = zonedDateTime.getPrimaryTimeString()
                 findViewById<TextView>(R.id.time_secondary).apply {
                     if (isAmbient) {
@@ -130,7 +122,7 @@ class NocturneWatchCanvasRenderer(
                     val scale = measuredWidth.toFloat() / measuredHeight
                     it.scaleX = scale
                     it.scaleY = scale
-                    it.translationY = it.measuredHeight * (0.25f + abs(14 - (zonedDateTime.moonAge())).toFloat() * 0.65f / 14)
+                    it.translationY = (0.22f + abs(14 - (zonedDateTime.moonAge())).toFloat() * 0.65f / 14) * it.measuredHeight - 30f
                 }
                 findViewById<View>(R.id.wave).visibility = if (isAmbient) View.VISIBLE else View.GONE
                 draw(canvas)
@@ -215,7 +207,4 @@ class NocturneWatchCanvasRenderer(
     private fun getBackgroundColor(isAmbient: Boolean): Int =
         if (isAmbient) Color.BLACK
         else ContextCompat.getColor(context, R.color.background)
-
-    private fun ZonedDateTime.getAlarmString(): String =
-        "%02d:%02d(%s)".format(hour, minute, getDayString())
 }

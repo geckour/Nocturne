@@ -11,8 +11,8 @@ android {
         applicationId "com.geckour.nocturne"
         targetSdkVersion 33
         minSdkVersion 26
-        versionCode 32
-        versionName "1.0.3"
+        versionCode 34
+        versionName "1.1.1"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 

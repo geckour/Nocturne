@@ -5,15 +5,15 @@
     "kind": "Directory"
   },
   "applicationId": "com.geckour.nocturne",
-  "variantName": "wear2Release",
+  "variantName": "wear1Release",
   "elements": [
     {
       "type": "SINGLE",
       "filters": [],
       "attributes": [],
-      "versionCode": 330100003,
-      "versionName": "1.0.3",
-      "outputFile": "wear-wear2-release.apk"
+      "versionCode": 330100101,
+      "versionName": "1.1.1",
+      "outputFile": "wear-wear1-release.apk"
     }
   ],
   "elementType": "File"
