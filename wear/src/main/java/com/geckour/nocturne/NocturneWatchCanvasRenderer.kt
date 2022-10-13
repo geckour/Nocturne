@@ -23,6 +23,7 @@ import androidx.wear.watchface.Renderer
 import androidx.wear.watchface.WatchState
 import androidx.wear.watchface.style.CurrentUserStyleRepository
 import androidx.wear.watchface.style.WatchFaceLayer
+import timber.log.Timber
 import java.time.DayOfWeek
 import java.time.ZonedDateTime
 import kotlin.math.PI
@@ -62,6 +63,7 @@ class NocturneWatchCanvasRenderer(
         }
 
     private val layout: View = LayoutInflater.from(context).inflate(R.layout.face_main, null)
+    private var showMoonAgeUntil: Long = 0
 
     override suspend fun createSharedAssets(): SharedAssets = object : SharedAssets {
 
@@ -70,25 +72,27 @@ class NocturneWatchCanvasRenderer(
 
     override fun render(canvas: Canvas, bounds: Rect, zonedDateTime: ZonedDateTime, sharedAssets: SharedAssets) {
         val isAmbient = renderParameters.drawMode == DrawMode.AMBIENT
+        val moonAge = zonedDateTime.moonAge()
 
         // CanvasComplicationDrawable already obeys rendererParameters.
         drawComplications(canvas, zonedDateTime)
 
         canvas.drawColor(getBackgroundColor(isAmbient))
 
-        val width = bounds.width().toFloat()
+        val width = bounds.height().toFloat()
         val height = bounds.height().toFloat()
 
         if (isAmbient.not()) {
             val phase = zonedDateTime.toInstant().toEpochMilli() % 5600 * PI / 2800
             val path = Path()
 
-            path.moveTo(0f, height / 2f)
-            repeat(500) {
-                val t = it / 500f
+            path.moveTo(0f, height)
+            val counts = (width / 10).toInt()
+            repeat(counts + 1) {
+                val t = it.toFloat() / counts
                 path.lineTo(
                     t * width,
-                    (0.22f + abs(14 - (zonedDateTime.moonAge())).toFloat() * 0.65f / 14) * height + sin(t * 18 - phase).toFloat() * 9f
+                    (0.22f + abs(14 - (moonAge)).toFloat() * 0.65f / 14) * height + sin(t * 18 - phase).toFloat() * 9f
                 )
             }
             path.lineTo(width, height)
@@ -122,9 +126,13 @@ class NocturneWatchCanvasRenderer(
                     val scale = measuredWidth.toFloat() / measuredHeight
                     it.scaleX = scale
                     it.scaleY = scale
-                    it.translationY = (0.22f + abs(14 - (zonedDateTime.moonAge())).toFloat() * 0.65f / 14) * it.measuredHeight - 30f
+                    it.translationY = (0.22f + abs(14 - (moonAge)).toFloat() * 0.65f / 14) * it.measuredHeight - 30f
                 }
                 findViewById<View>(R.id.wave).visibility = if (isAmbient) View.VISIBLE else View.GONE
+                findViewById<TextView>(R.id.moon_age).apply {
+                    text = context.getString(R.string.message_moonage, moonAge)
+                    visibility = if (showMoonAgeUntil > System.currentTimeMillis()) View.VISIBLE else View.GONE
+                }
                 draw(canvas)
             }
         }
@@ -167,11 +175,15 @@ class NocturneWatchCanvasRenderer(
     override fun renderHighlightLayer(canvas: Canvas, bounds: Rect, zonedDateTime: ZonedDateTime, sharedAssets: SharedAssets) {
         canvas.drawColor(renderParameters.highlightLayer!!.backgroundTint)
 
-        for ((_, complication) in complicationSlotsManager.complicationSlots) {
+        complicationSlotsManager.complicationSlots.forEach { (_, complication) ->
             if (complication.enabled) {
                 complication.renderHighlightLayer(canvas, zonedDateTime, renderParameters)
             }
         }
+    }
+
+    fun showMoonAge() {
+        showMoonAgeUntil = System.currentTimeMillis() + 3000
     }
 
     // ----- All drawing functions -----

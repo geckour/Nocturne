@@ -35,26 +35,25 @@ class NocturneFaceService : WatchFaceService() {
         return WatchFace(
             watchFaceType = WatchFaceType.ANALOG,
             renderer = renderer
-        ).setTapListener(object : WatchFace.TapListener {
+        ).setTapListener(
+            object : WatchFace.TapListener {
 
-            override fun onTapEvent(tapType: Int, tapEvent: TapEvent, complicationSlot: ComplicationSlot?) {
-                when (tapType) {
-                    TapType.DOWN -> {
-                        // The user has started touching the screen.
+                override fun onTapEvent(tapType: Int, tapEvent: TapEvent, complicationSlot: ComplicationSlot?) {
+                    when (tapType) {
+                        TapType.DOWN -> {
+                            // The user has started touching the screen.
+                        }
+
+                        TapType.CANCEL -> {
+                            // The user has started a different gesture or otherwise cancelled the tap.
+                        }
+
+                        TapType.UP -> {
+                            renderer.showMoonAge()
+                        }
                     }
-
-                    TapType.CANCEL -> {
-                        // The user has started a different gesture or otherwise cancelled the tap.
-                    }
-
-                    TapType.UP ->
-                        Toast.makeText(
-                            applicationContext,
-                            getString(R.string.message_moonage, ZonedDateTime.now().moonAge()),
-                            Toast.LENGTH_SHORT
-                        ).show()
                 }
             }
-        })
+        )
     }
 }

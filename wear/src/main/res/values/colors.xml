@@ -5,4 +5,5 @@
     <color name="circle">#c0ffff8d</color>
     <color name="wave">#0272B3</color>
     <color name="backgroundImageAmbientTint">#16344b</color>
+    <color name="toastBackground">#1B252A</color>
 </resources>

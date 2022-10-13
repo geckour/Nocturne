@@ -11,8 +11,8 @@ android {
         applicationId "com.geckour.nocturne"
         targetSdkVersion 33
         minSdkVersion 26
-        versionCode 34
-        versionName "1.1.1"
+        versionCode 35
+        versionName "1.1.2"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
@@ -49,6 +49,7 @@ android {
         wear1 { dimension 'distribute' }
         wear2 { dimension 'distribute' }
     }
+    namespace 'com.geckour.nocturne'
 }
 
 dependencies {

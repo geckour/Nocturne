@@ -92,4 +92,25 @@
         app:layout_constraintStart_toStartOf="@id/guide_box_left"
         tools:text="18/05/31 (金)" />
 
+    <androidx.cardview.widget.CardView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="8dp"
+        app:cardCornerRadius="8dp"
+        app:cardBackgroundColor="@color/toastBackground"
+        app:layout_constraintBottom_toTopOf="@id/guide_time_secondary"
+        app:layout_constraintEnd_toEndOf="@id/guide_box_right"
+        app:layout_constraintStart_toStartOf="@id/guide_box_left">
+
+        <TextView
+            android:id="@+id/moon_age"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:paddingHorizontal="8dp"
+            android:paddingVertical="4dp"
+            android:textColor="@color/text"
+            android:textSize="12sp"
+            tools:text="Moon age: 15.00" />
+    </androidx.cardview.widget.CardView>
+
 </androidx.constraintlayout.widget.ConstraintLayout>
