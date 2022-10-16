@@ -1,9 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="background">#263238</color>
+    <color name="colorPrimary">#0C7DB9</color>
+    <color name="colorPrimaryDark">#186791</color>
+    <color name="colorAccent">#ffff8d</color>
+    <color name="background">#1E262A</color>
     <color name="text">#f0fffeee</color>
     <color name="circle">#c0ffff8d</color>
     <color name="wave">#0272B3</color>
     <color name="backgroundImageAmbientTint">#16344b</color>
-    <color name="toastBackground">#1B252A</color>
+    <color name="toastBackground">#14181A</color>
 </resources>
