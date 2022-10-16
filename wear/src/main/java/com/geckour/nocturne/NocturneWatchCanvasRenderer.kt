@@ -196,7 +196,7 @@ class NocturneWatchCanvasRenderer(
     }
 
     private fun ZonedDateTime.getDateString(): String =
-        "%02d/%02d/%02d(%s)".format(year % 100, monthValue, dayOfMonth, getDayString())
+        "%04d-%02d-%02d %s".format(year, monthValue, dayOfMonth, getDayString())
 
     private fun ZonedDateTime.getPrimaryTimeString(): String =
         "%02d:%02d".format(hour, minute)

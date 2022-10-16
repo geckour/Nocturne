@@ -1,11 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="message_moonage">月齢: %1$.2f</string>
-    <string name="day_mon">月</string>
-    <string name="day_tue">火</string>
-    <string name="day_wed">水</string>
-    <string name="day_thu">木</string>
-    <string name="day_fri">金</string>
-    <string name="day_sat">土</string>
-    <string name="day_sun">日</string>
 </resources>
