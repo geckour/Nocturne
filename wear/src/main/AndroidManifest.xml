@@ -39,7 +39,7 @@
                 android:resource="@drawable/preview_main_circular" />
             <meta-data
                 android:name="com.google.android.wearable.watchface.companionConfigurationAction"
-                android:value="com.geckour.nocturne.CONFIG_ANALOG" />
+                android:value="com.geckour.nocturne.CONFIG" />
 
             <intent-filter>
                 <action android:name="android.service.wallpaper.WallpaperService" />
