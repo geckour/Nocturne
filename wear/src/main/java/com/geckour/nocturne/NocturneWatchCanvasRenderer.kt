@@ -1,11 +1,15 @@
 package com.geckour.nocturne
 
 import android.content.Context
+import android.content.SharedPreferences
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.Point
+import android.graphics.PointF
 import android.graphics.Rect
 import android.graphics.RectF
 import android.util.Size
@@ -22,13 +26,20 @@ import androidx.wear.watchface.DrawMode
 import androidx.wear.watchface.Renderer
 import androidx.wear.watchface.WatchState
 import androidx.wear.watchface.style.CurrentUserStyleRepository
+import androidx.wear.watchface.style.UserStyleSetting
 import androidx.wear.watchface.style.WatchFaceLayer
-import timber.log.Timber
+import com.geckour.nocturne.NocturneListenerService.Companion.PREFERENCE_KEY_BACKGROUND_IMAGE
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import java.time.DayOfWeek
 import java.time.ZonedDateTime
 import kotlin.math.PI
 import kotlin.math.abs
+import kotlin.math.cos
 import kotlin.math.max
+import kotlin.math.min
 import kotlin.math.sin
 
 // Default for how long each frame is displayed at expected frame rate.
@@ -43,8 +54,9 @@ class NocturneWatchCanvasRenderer(
     surfaceHolder: SurfaceHolder,
     watchState: WatchState,
     private val complicationSlotsManager: ComplicationSlotsManager,
-    currentUserStyleRepository: CurrentUserStyleRepository,
-    canvasType: Int
+    private val currentUserStyleRepository: CurrentUserStyleRepository,
+    canvasType: Int,
+    private val sharedPreferences: SharedPreferences
 ) : Renderer.CanvasRenderer2<Renderer.SharedAssets>(
     surfaceHolder,
     currentUserStyleRepository,
@@ -64,6 +76,21 @@ class NocturneWatchCanvasRenderer(
 
     private val layout: View = LayoutInflater.from(context).inflate(R.layout.face_main, null)
     private var showMoonAgeUntil: Long = 0
+    private var fillWave = true
+    private var showLongHand = false
+    private var showShortHand = false
+
+    override suspend fun init() {
+        super.init()
+
+        CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate).launch {
+            currentUserStyleRepository.userStyle.collect { userStyle ->
+                fillWave = (userStyle[NocturneFaceService.fillWaveSetting] as UserStyleSetting.BooleanUserStyleSetting.BooleanOption).value
+                showLongHand = (userStyle[NocturneFaceService.showLongHandSetting] as UserStyleSetting.BooleanUserStyleSetting.BooleanOption).value
+                showShortHand = (userStyle[NocturneFaceService.showShortHandSetting] as UserStyleSetting.BooleanUserStyleSetting.BooleanOption).value
+            }
+        }
+    }
 
     override suspend fun createSharedAssets(): SharedAssets = object : SharedAssets {
 
@@ -79,6 +106,10 @@ class NocturneWatchCanvasRenderer(
 
         canvas.drawColor(getBackgroundColor(isAmbient))
 
+        getBackground()?.let {
+            canvas.drawBitmap(it, 0f, 0f, Paint())
+        }
+
         val width = bounds.height().toFloat()
         val height = bounds.height().toFloat()
 
@@ -86,26 +117,43 @@ class NocturneWatchCanvasRenderer(
             val phase = zonedDateTime.toInstant().toEpochMilli() % 5600 * PI / 2800
             val path = Path()
 
-            path.moveTo(0f, height)
-            val counts = (width / 10).toInt()
-            repeat(counts + 1) {
-                val t = it.toFloat() / counts
-                path.lineTo(
-                    t * width,
-                    (0.22f + abs(14 - (moonAge)).toFloat() * 0.65f / 14) * height + sin(t * 18 - phase).toFloat() * 9f
-                )
+            if (fillWave) {
+                path.moveTo(0f, height)
+                val counts = (width / 10).toInt()
+                repeat(counts + 1) {
+                    val t = it.toFloat() / counts
+                    path.lineTo(
+                        t * width,
+                        (0.22f + abs(14 - (moonAge)).toFloat() * 0.65f / 14) * height + sin(t * 18 - phase).toFloat() * 9f
+                    )
+                }
+                path.lineTo(width, height)
+                path.lineTo(0f, height)
+                path.close()
+                val paint = Paint().apply {
+                    style = Paint.Style.FILL
+                    color = ContextCompat.getColor(context, R.color.wave)
+                    isAntiAlias = true
+                }
+                canvas.drawPath(path, paint)
+            } else {
+                path.moveTo(0f, (0.22f + abs(14 - (moonAge)).toFloat() * 0.65f / 14) * height + sin(-phase).toFloat() * 9f)
+                val counts = (width / 10).toInt()
+                repeat(counts) {
+                    val t = (it + 1).toFloat() / counts
+                    path.lineTo(
+                        t * width,
+                        (0.22f + abs(14 - (moonAge)).toFloat() * 0.65f / 14) * height + sin(t * 18 - phase).toFloat() * 9f
+                    )
+                }
+                val paint = Paint().apply {
+                    strokeWidth = 2f
+                    style = Paint.Style.STROKE
+                    color = ContextCompat.getColor(context, R.color.wave)
+                    isAntiAlias = true
+                }
+                canvas.drawPath(path, paint)
             }
-            path.lineTo(width, height)
-            path.lineTo(0f, height)
-            path.close()
-
-            val paint = Paint().apply {
-                strokeWidth = 1f
-                style = Paint.Style.FILL
-                color = ContextCompat.getColor(context, R.color.wave)
-                isAntiAlias = true
-            }
-            canvas.drawPath(path, paint)
         }
 
         if (renderParameters.watchFaceLayers.contains(WatchFaceLayer.COMPLICATIONS_OVERLAY)) {
@@ -137,13 +185,90 @@ class NocturneWatchCanvasRenderer(
             }
         }
 
+        val longerSideLength = max(width, height)
+        val milli = zonedDateTime.toInstant().toEpochMilli()
+        val secondF: Float = milli % 60000 * 0.001f
+
+        if (showLongHand || showShortHand) {
+            val radius = 6f
+            val screenHalfLength = longerSideLength / 2
+            val shortHandLength = screenHalfLength - 28f
+            val paint = Paint().apply {
+                strokeWidth = radius * 2
+                strokeCap = Paint.Cap.ROUND
+                style = Paint.Style.STROKE
+                color = ContextCompat.getColor(context, R.color.text)
+                isAntiAlias = true
+            }
+            if (showLongHand) {
+                val longHandLength = screenHalfLength - 9f
+                val longOutCenter =
+                    if (isAmbient) {
+                        val radian = PI * (-0.5f + (2 * zonedDateTime.minute / 60f))
+                        PointF(
+                            screenHalfLength + longHandLength * cos(radian).toFloat(),
+                            screenHalfLength + longHandLength * sin(radian).toFloat()
+                        )
+                    } else {
+                        val radian = PI * (-0.5f + 2 * (zonedDateTime.minute / 60f + secondF / 3600))
+                        PointF(
+                            screenHalfLength + longHandLength * cos(radian).toFloat(),
+                            screenHalfLength + longHandLength * sin(radian).toFloat()
+                        )
+                    }
+                val longInCenter =
+                    if (isAmbient) {
+                        val radian = PI * (-0.5f + (2 * zonedDateTime.minute / 60f))
+                        PointF(
+                            screenHalfLength + shortHandLength * cos(radian).toFloat(),
+                            screenHalfLength + shortHandLength * sin(radian).toFloat()
+                        )
+                    } else {
+                        val radian = PI * (-0.5f + 2 * (zonedDateTime.minute / 60f + secondF / 3600))
+                        PointF(
+                            screenHalfLength + shortHandLength * cos(radian).toFloat(),
+                            screenHalfLength + shortHandLength * sin(radian).toFloat()
+                        )
+                    }
+                canvas.drawLine(
+                    longInCenter.x,
+                    longInCenter.y,
+                    longOutCenter.x,
+                    longOutCenter.y,
+                    paint
+                )
+            }
+            if (showShortHand) {
+                val shortCenter =
+                    if (isAmbient) {
+                        val radian = PI * (-0.5f + (2 * (zonedDateTime.hour / 12f + zonedDateTime.minute / 720f)))
+                        PointF(
+                            screenHalfLength + shortHandLength * cos(radian).toFloat(),
+                            screenHalfLength + shortHandLength * sin(radian).toFloat()
+                        )
+                    } else {
+                        val radian = PI * (-0.5f + 2 * (zonedDateTime.hour / 12f + zonedDateTime.minute / 720f + secondF / 43200))
+                        PointF(
+                            screenHalfLength + shortHandLength * cos(radian).toFloat(),
+                            screenHalfLength + shortHandLength * sin(radian).toFloat()
+                        )
+                    }
+                canvas.drawLine(
+                    shortCenter.x,
+                    shortCenter.y,
+                    shortCenter.x,
+                    shortCenter.y,
+                    paint
+                )
+            }
+        }
+
         if (isAmbient.not()) {
-            val longerSideLength = max(width, height)
             val circleRect = RectF(
-                longerSideLength * 0.04f,
-                longerSideLength * 0.04f,
-                longerSideLength * 0.96f,
-                longerSideLength * 0.96f
+                17f,
+                17f,
+                longerSideLength - 17f,
+                longerSideLength - 17f
             )
             val paint = Paint().apply {
                 strokeWidth = 8f
@@ -152,8 +277,6 @@ class NocturneWatchCanvasRenderer(
                 isAntiAlias = true
             }
             val minute = zonedDateTime.minute
-            val milli = zonedDateTime.toInstant().toEpochMilli()
-            val secondF: Float = milli % 60000 * 0.001f
             val isOdd = minute % 2 == 1
 
             if (isOdd && secondF < FRAME_PERIOD_MS_DEFAULT * 0.001) {
@@ -181,6 +304,23 @@ class NocturneWatchCanvasRenderer(
             }
         }
     }
+
+    private fun getBackground(): Bitmap? =
+        sharedPreferences.getString(PREFERENCE_KEY_BACKGROUND_IMAGE, null)
+            ?.toByteArray()
+            ?.let {
+                val source = BitmapFactory.decodeByteArray(it, 0, it.size)
+                val scale =
+                    (if (source.width < source.height) spec.width else spec.height).toFloat() / min(source.width, source.height)
+
+                if (scale == 1f) {
+                    source
+                } else {
+                    Bitmap.createScaledBitmap(source, (source.width * scale).toInt(), (source.height * scale).toInt(), false).apply {
+                        source.recycle()
+                    }
+                }
+            }
 
     fun showMoonAge() {
         showMoonAgeUntil = System.currentTimeMillis() + 3000
