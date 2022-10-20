@@ -6,7 +6,6 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.Point
-import android.graphics.PointF
 import android.graphics.Rect
 import android.graphics.RectF
 import android.util.Size
@@ -32,7 +31,6 @@ import java.time.DayOfWeek
 import java.time.ZonedDateTime
 import kotlin.math.PI
 import kotlin.math.abs
-import kotlin.math.cos
 import kotlin.math.max
 import kotlin.math.sin
 
@@ -70,8 +68,7 @@ class NocturneWatchCanvasRenderer(
     private val layout: View = LayoutInflater.from(context).inflate(R.layout.face_main, null)
     private var showMoonAgeUntil: Long = 0
     private var fillWave = true
-    private var showLongHand = false
-    private var showShortHand = false
+    private var circleType = CircleType.default
     private var latestDrawMode: DrawMode = DrawMode.INTERACTIVE
     private var zonedDateTimeOnStartedAmbient: ZonedDateTime? = null
 
@@ -81,8 +78,9 @@ class NocturneWatchCanvasRenderer(
         CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate).launch {
             currentUserStyleRepository.userStyle.collect { userStyle ->
                 fillWave = (userStyle[NocturneFaceService.fillWaveSetting] as UserStyleSetting.BooleanUserStyleSetting.BooleanOption).value
-                showLongHand = (userStyle[NocturneFaceService.showLongHandSetting] as UserStyleSetting.BooleanUserStyleSetting.BooleanOption).value
-                showShortHand = (userStyle[NocturneFaceService.showShortHandSetting] as UserStyleSetting.BooleanUserStyleSetting.BooleanOption).value
+                circleType = CircleType.fromOrdinal(
+                    (userStyle[NocturneFaceService.circleTypeSetting] as UserStyleSetting.LongRangeUserStyleSetting.LongRangeOption).value.toInt()
+                )
             }
         }
     }
@@ -118,9 +116,7 @@ class NocturneWatchCanvasRenderer(
         val longerSideLength = max(width, height)
         val secondF: Float = zonedDateTime.toInstant().toEpochMilli() % 60000 * 0.001f
 
-        drawHands(canvas, zonedDateTime, longerSideLength / 2, secondF, isAmbient)
-
-        drawCircle(canvas, zonedDateTime, longerSideLength, secondF, isAmbient)
+        drawCircle(canvas, zonedDateTime, secondF, longerSideLength, isAmbient)
 
         latestDrawMode = renderParameters.drawMode
     }
@@ -212,82 +208,7 @@ class NocturneWatchCanvasRenderer(
         }
     }
 
-    private fun drawHands(canvas: Canvas, zonedDateTime: ZonedDateTime, screenHalfLength: Float, second: Float, isAmbient: Boolean) {
-        if (showLongHand || showShortHand) {
-            val radius = 6f
-            val shortHandLength = screenHalfLength - 28f
-            val paint = Paint().apply {
-                strokeWidth = radius * 2
-                strokeCap = Paint.Cap.ROUND
-                style = Paint.Style.STROKE
-                color = ContextCompat.getColor(context, R.color.text)
-                isAntiAlias = true
-            }
-            if (showLongHand) {
-                val longHandLength = screenHalfLength - 9f
-                val longOutCenter =
-                    if (isAmbient) {
-                        val radian = PI * (-0.5f + (2 * zonedDateTime.minute / 60f))
-                        PointF(
-                            screenHalfLength + longHandLength * cos(radian).toFloat(),
-                            screenHalfLength + longHandLength * sin(radian).toFloat()
-                        )
-                    } else {
-                        val radian = PI * (-0.5f + 2 * (zonedDateTime.minute / 60f + second / 3600))
-                        PointF(
-                            screenHalfLength + longHandLength * cos(radian).toFloat(),
-                            screenHalfLength + longHandLength * sin(radian).toFloat()
-                        )
-                    }
-                val longInCenter =
-                    if (isAmbient) {
-                        val radian = PI * (-0.5f + (2 * zonedDateTime.minute / 60f))
-                        PointF(
-                            screenHalfLength + shortHandLength * cos(radian).toFloat(),
-                            screenHalfLength + shortHandLength * sin(radian).toFloat()
-                        )
-                    } else {
-                        val radian = PI * (-0.5f + 2 * (zonedDateTime.minute / 60f + second / 3600))
-                        PointF(
-                            screenHalfLength + shortHandLength * cos(radian).toFloat(),
-                            screenHalfLength + shortHandLength * sin(radian).toFloat()
-                        )
-                    }
-                canvas.drawLine(
-                    longInCenter.x,
-                    longInCenter.y,
-                    longOutCenter.x,
-                    longOutCenter.y,
-                    paint
-                )
-            }
-            if (showShortHand) {
-                val shortCenter =
-                    if (isAmbient) {
-                        val radian = PI * (-0.5f + (2 * (zonedDateTime.hour / 12f + zonedDateTime.minute / 720f)))
-                        PointF(
-                            screenHalfLength + shortHandLength * cos(radian).toFloat(),
-                            screenHalfLength + shortHandLength * sin(radian).toFloat()
-                        )
-                    } else {
-                        val radian = PI * (-0.5f + 2 * (zonedDateTime.hour / 12f + zonedDateTime.minute / 720f + second / 43200))
-                        PointF(
-                            screenHalfLength + shortHandLength * cos(radian).toFloat(),
-                            screenHalfLength + shortHandLength * sin(radian).toFloat()
-                        )
-                    }
-                canvas.drawLine(
-                    shortCenter.x,
-                    shortCenter.y,
-                    shortCenter.x,
-                    shortCenter.y,
-                    paint
-                )
-            }
-        }
-    }
-
-    private fun drawCircle(canvas: Canvas, zonedDateTime: ZonedDateTime, longerSideLength: Float, second: Float, isAmbient: Boolean) {
+    private fun drawCircle(canvas: Canvas, zonedDateTime: ZonedDateTime, second: Float, longerSideLength: Float, isAmbient: Boolean) {
         if (isAmbient.not()) {
             val circleRect = RectF(
                 17f,
@@ -302,21 +223,50 @@ class NocturneWatchCanvasRenderer(
                 color = ContextCompat.getColor(context, R.color.circle)
                 isAntiAlias = true
             }
+            val hour = zonedDateTime.hour
             val minute = zonedDateTime.minute
-            val isOdd = minute % 2 == 1
 
-            if (isOdd && second < FRAME_PERIOD_MS_DEFAULT * 0.001) {
-                canvas.drawCircle(circleRect.centerX(), circleRect.centerY(), circleRect.width() / 2, paint)
-            } else {
-                var startAngle = -90f
-                var sweepAngle = second * 360 / 60
+            when (circleType) {
+                CircleType.SECOND -> {
+                    val isOdd = minute % 2 == 1
+                    if (isOdd && second < FRAME_PERIOD_MS_DEFAULT * 0.001) {
+                        canvas.drawCircle(circleRect.centerX(), circleRect.centerY(), circleRect.width() / 2, paint)
+                    } else {
+                        var startAngle = -90f
+                        var sweepAngle = second * 360 / 60
 
-                if (isOdd) {
-                    sweepAngle = 360f - sweepAngle
-                    startAngle = -90f - sweepAngle
+                        if (isOdd) {
+                            sweepAngle = 360f - sweepAngle
+                            startAngle = -90f - sweepAngle
+                        }
+
+                        canvas.drawArc(circleRect, startAngle, sweepAngle, false, paint)
+                    }
                 }
+                CircleType.MINUTE -> {
+                    val isOdd = hour % 2 == 1
+                    var startAngle = -90f
+                    var sweepAngle = (minute + second / 60) * 360 / 60
 
-                canvas.drawArc(circleRect, startAngle, sweepAngle, false, paint)
+                    if (isOdd) {
+                        sweepAngle = 360f - sweepAngle
+                        startAngle = -90f - sweepAngle
+                    }
+
+                    canvas.drawArc(circleRect, startAngle, sweepAngle, false, paint)
+                }
+                CircleType.HOUR -> {
+                    val isOdd = hour / 12 == 1
+                    var startAngle = -90f
+                    var sweepAngle = (hour % 12 + minute / 60f + second / 3600) * 360 / 12
+
+                    if (isOdd) {
+                        sweepAngle = 360f - sweepAngle
+                        startAngle = -90f - sweepAngle
+                    }
+
+                    canvas.drawArc(circleRect, startAngle, sweepAngle, false, paint)
+                }
             }
         }
     }

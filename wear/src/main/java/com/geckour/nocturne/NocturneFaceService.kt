@@ -2,7 +2,6 @@ package com.geckour.nocturne
 
 import android.graphics.RectF
 import android.view.SurfaceHolder
-import androidx.preference.PreferenceManager
 import androidx.wear.watchface.CanvasComplicationFactory
 import androidx.wear.watchface.CanvasType
 import androidx.wear.watchface.ComplicationSlot
@@ -27,24 +26,8 @@ class NocturneFaceService : WatchFaceService() {
 
     companion object {
 
-        val showLongHandSetting =
-            UserStyleSetting.BooleanUserStyleSetting(
-                id = UserStyleSetting.Id("settings_show_long_hand"),
-                displayName = "Show long hand",
-                description = "",
-                icon = null,
-                affectsWatchFaceLayers = listOf(WatchFaceLayer.COMPLICATIONS),
-                defaultValue = false
-            )
-        val showShortHandSetting =
-            UserStyleSetting.BooleanUserStyleSetting(
-                id = UserStyleSetting.Id("settings_show_short_hand"),
-                displayName = "Show short hand",
-                description = "",
-                icon = null,
-                affectsWatchFaceLayers = listOf(WatchFaceLayer.COMPLICATIONS),
-                defaultValue = false
-            )
+        private const val PREF_KEY_CIRCLE_TYPE = "pref_key_circle_type"
+
         val fillWaveSetting =
             UserStyleSetting.BooleanUserStyleSetting(
                 id = UserStyleSetting.Id("settings_fill_wave"),
@@ -54,14 +37,24 @@ class NocturneFaceService : WatchFaceService() {
                 affectsWatchFaceLayers = listOf(WatchFaceLayer.COMPLICATIONS),
                 defaultValue = true
             )
+        val circleTypeSetting =
+            UserStyleSetting.LongRangeUserStyleSetting(
+                id = UserStyleSetting.Id("settings_circle_type"),
+                displayName = "Type of circle",
+                description = "",
+                icon = null,
+                affectsWatchFaceLayers = listOf(WatchFaceLayer.COMPLICATIONS),
+                defaultValue = CircleType.default.ordinal.toLong(),
+                minimumValue = CircleType.values().minOf { it.ordinal }.toLong(),
+                maximumValue = CircleType.values().maxOf { it.ordinal }.toLong()
+            )
     }
 
     override fun createUserStyleSchema(): UserStyleSchema =
         UserStyleSchema(
             listOf(
-                showLongHandSetting,
-                showShortHandSetting,
                 fillWaveSetting,
+                circleTypeSetting,
             )
         )
 
@@ -77,7 +70,7 @@ class NocturneFaceService : WatchFaceService() {
             watchState = watchState,
             complicationSlotsManager = complicationSlotsManager,
             currentUserStyleRepository = currentUserStyleRepository,
-            canvasType = CanvasType.HARDWARE,
+            canvasType = CanvasType.HARDWARE
         )
 
         return WatchFace(

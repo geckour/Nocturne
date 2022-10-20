@@ -10,6 +10,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -34,6 +35,8 @@ import androidx.lifecycle.lifecycleScope
 import androidx.wear.compose.material.Button
 import androidx.wear.compose.material.ButtonDefaults
 import androidx.wear.compose.material.Icon
+import androidx.wear.compose.material.RadioButton
+import androidx.wear.compose.material.RadioButtonDefaults
 import androidx.wear.compose.material.ScalingLazyColumn
 import androidx.wear.compose.material.Switch
 import androidx.wear.compose.material.SwitchDefaults
@@ -106,81 +109,50 @@ class NocturneConfigActivity : AppCompatActivity() {
                     }
                 }
                 item {
-                    Row(
+                    Column(
                         modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
+                        horizontalAlignment = Alignment.Start
                     ) {
-                        val checked =
-                            (editorSession?.userStyle
+                        Text(text = "Circle type:")
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            val selectedType = (editorSession?.userStyle
                                 ?.collectAsState()
                                 ?.value
-                                ?.get(NocturneFaceService.showLongHandSetting) as UserStyleSetting.BooleanUserStyleSetting.BooleanOption?)?.value
-                                ?: false
-
-                        Text(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .weight(1f), text = "Show long hand"
-                        )
-                        Switch(
-                            modifier = Modifier.padding(4.dp),
-                            checked = checked,
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = colorResource(id = R.color.colorAccent),
-                                checkedTrackColor = colorResource(id = R.color.text)
-                            ),
-                            onCheckedChange = {
-                                editorSession?.userStyle?.value?.let { userStyle ->
-                                    editorSession?.userStyle?.value = userStyle.toMutableUserStyle()
-                                        .apply {
-                                            set(
-                                                NocturneFaceService.showLongHandSetting,
-                                                UserStyleSetting.BooleanUserStyleSetting.BooleanOption.from(it)
-                                            )
-                                        }
-                                        .toUserStyle()
-                                }
-                            }
-                        )
-                    }
-                }
-                item {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        val checked =
-                            (editorSession?.userStyle
-                                ?.collectAsState()
+                                ?.get(NocturneFaceService.circleTypeSetting) as UserStyleSetting.LongRangeUserStyleSetting.LongRangeOption?)
                                 ?.value
-                                ?.get(NocturneFaceService.showShortHandSetting) as UserStyleSetting.BooleanUserStyleSetting.BooleanOption?)?.value
-                                ?: false
+                                ?.let { CircleType.fromOrdinal(it.toInt()) }
+                                ?: CircleType.default
 
-                        Text(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .weight(1f), text = "Show short hand"
-                        )
-                        Switch(
-                            modifier = Modifier.padding(4.dp),
-                            checked = checked,
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = colorResource(id = R.color.colorAccent),
-                                checkedTrackColor = colorResource(id = R.color.text)
-                            ),
-                            onCheckedChange = {
-                                editorSession?.userStyle?.value?.let { userStyle ->
-                                    editorSession?.userStyle?.value = userStyle.toMutableUserStyle()
-                                        .apply {
-                                            set(
-                                                NocturneFaceService.showShortHandSetting,
-                                                UserStyleSetting.BooleanUserStyleSetting.BooleanOption.from(it)
-                                            )
+                            CircleType.values().forEach {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .weight(1f),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Text(text = it.displayName)
+                                    RadioButton(
+                                        selected = it == selectedType,
+                                        colors = RadioButtonDefaults.colors(
+                                            selectedDotColor = colorResource(id = R.color.colorAccent),
+                                            selectedRingColor = colorResource(id = R.color.text)
+                                        ),
+                                        onClick = {
+                                            editorSession?.userStyle?.value?.let { userStyle ->
+                                                editorSession?.userStyle?.value = userStyle.toMutableUserStyle()
+                                                    .apply {
+                                                        set(
+                                                            NocturneFaceService.circleTypeSetting,
+                                                            UserStyleSetting.LongRangeUserStyleSetting.LongRangeOption(it.ordinal.toLong())
+                                                        )
+                                                    }
+                                                    .toUserStyle()
+                                            }
                                         }
-                                        .toUserStyle()
+                                    )
                                 }
                             }
-                        )
+                        }
                     }
                 }
                 item {
