@@ -1,9 +1,6 @@
 package com.geckour.nocturne
 
 import android.content.Context
-import android.content.SharedPreferences
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
@@ -17,7 +14,6 @@ import android.view.LayoutInflater
 import android.view.SurfaceHolder
 import android.view.View
 import android.view.WindowManager
-import android.widget.ImageView
 import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.core.content.getSystemService
@@ -28,7 +24,6 @@ import androidx.wear.watchface.WatchState
 import androidx.wear.watchface.style.CurrentUserStyleRepository
 import androidx.wear.watchface.style.UserStyleSetting
 import androidx.wear.watchface.style.WatchFaceLayer
-import com.geckour.nocturne.NocturneListenerService.Companion.PREFERENCE_KEY_BACKGROUND_IMAGE
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -39,7 +34,6 @@ import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.max
-import kotlin.math.min
 import kotlin.math.sin
 
 // Default for how long each frame is displayed at expected frame rate.
@@ -55,8 +49,7 @@ class NocturneWatchCanvasRenderer(
     watchState: WatchState,
     private val complicationSlotsManager: ComplicationSlotsManager,
     private val currentUserStyleRepository: CurrentUserStyleRepository,
-    canvasType: Int,
-    private val sharedPreferences: SharedPreferences
+    canvasType: Int
 ) : Renderer.CanvasRenderer2<Renderer.SharedAssets>(
     surfaceHolder,
     currentUserStyleRepository,
@@ -79,6 +72,8 @@ class NocturneWatchCanvasRenderer(
     private var fillWave = true
     private var showLongHand = false
     private var showShortHand = false
+    private var latestDrawMode: DrawMode = DrawMode.INTERACTIVE
+    private var zonedDateTimeOnStartedAmbient: ZonedDateTime? = null
 
     override suspend fun init() {
         super.init()
@@ -99,63 +94,101 @@ class NocturneWatchCanvasRenderer(
 
     override fun render(canvas: Canvas, bounds: Rect, zonedDateTime: ZonedDateTime, sharedAssets: SharedAssets) {
         val isAmbient = renderParameters.drawMode == DrawMode.AMBIENT
+        if (isAmbient && latestDrawMode != renderParameters.drawMode) {
+            zonedDateTimeOnStartedAmbient = zonedDateTime
+        }
         val moonAge = zonedDateTime.moonAge()
-
-        // CanvasComplicationDrawable already obeys rendererParameters.
-        drawComplications(canvas, zonedDateTime)
 
         canvas.drawColor(getBackgroundColor(isAmbient))
 
-        getBackground()?.let {
-            canvas.drawBitmap(it, 0f, 0f, Paint())
-        }
+        //        getBackground(bounds)?.let {
+        //            canvas.drawBitmap(it, 0f, 0f, Paint())
+        //        }
 
         val width = bounds.height().toFloat()
         val height = bounds.height().toFloat()
 
-        if (isAmbient.not()) {
-            val phase = zonedDateTime.toInstant().toEpochMilli() % 5600 * PI / 2800
-            val path = Path()
+        drawWave(canvas, if (isAmbient) zonedDateTimeOnStartedAmbient ?: zonedDateTime else zonedDateTime, width, height, moonAge, isAmbient)
 
-            if (fillWave) {
-                path.moveTo(0f, height)
-                val counts = (width / 10).toInt()
-                repeat(counts + 1) {
-                    val t = it.toFloat() / counts
-                    path.lineTo(
-                        t * width,
-                        (0.22f + abs(14 - (moonAge)).toFloat() * 0.65f / 14) * height + sin(t * 18 - phase).toFloat() * 9f
-                    )
-                }
-                path.lineTo(width, height)
-                path.lineTo(0f, height)
-                path.close()
-                val paint = Paint().apply {
-                    style = Paint.Style.FILL
-                    color = ContextCompat.getColor(context, R.color.wave)
-                    isAntiAlias = true
-                }
-                canvas.drawPath(path, paint)
-            } else {
-                path.moveTo(0f, (0.22f + abs(14 - (moonAge)).toFloat() * 0.65f / 14) * height + sin(-phase).toFloat() * 9f)
-                val counts = (width / 10).toInt()
-                repeat(counts) {
-                    val t = (it + 1).toFloat() / counts
-                    path.lineTo(
-                        t * width,
-                        (0.22f + abs(14 - (moonAge)).toFloat() * 0.65f / 14) * height + sin(t * 18 - phase).toFloat() * 9f
-                    )
-                }
-                val paint = Paint().apply {
-                    strokeWidth = 2f
-                    style = Paint.Style.STROKE
-                    color = ContextCompat.getColor(context, R.color.wave)
-                    isAntiAlias = true
-                }
-                canvas.drawPath(path, paint)
+        // CanvasComplicationDrawable already obeys rendererParameters.
+        drawComplications(canvas, zonedDateTime)
+
+        setDataToLayout(canvas, zonedDateTime, moonAge, isAmbient)
+
+        val longerSideLength = max(width, height)
+        val secondF: Float = zonedDateTime.toInstant().toEpochMilli() % 60000 * 0.001f
+
+        drawHands(canvas, zonedDateTime, longerSideLength / 2, secondF, isAmbient)
+
+        drawCircle(canvas, zonedDateTime, longerSideLength, secondF, isAmbient)
+
+        latestDrawMode = renderParameters.drawMode
+    }
+
+    override fun renderHighlightLayer(canvas: Canvas, bounds: Rect, zonedDateTime: ZonedDateTime, sharedAssets: SharedAssets) {
+        canvas.drawColor(renderParameters.highlightLayer!!.backgroundTint)
+
+        complicationSlotsManager.complicationSlots.forEach { (_, complication) ->
+            if (complication.enabled) {
+                complication.renderHighlightLayer(canvas, zonedDateTime, renderParameters)
             }
         }
+    }
 
+    private fun drawWave(canvas: Canvas, zonedDateTime: ZonedDateTime, width: Float, height: Float, moonAge: Double, isAmbient: Boolean) {
+        val phase = zonedDateTime.toInstant().toEpochMilli() % 5600 * PI / 2800
+        val path = Path()
+        val paint = Paint().apply {
+            style = if (fillWave) Paint.Style.FILL else Paint.Style.STROKE
+            color = ContextCompat.getColor(context, if (isAmbient) R.color.waveAmbient else R.color.wave)
+            isAntiAlias = true
+            strokeWidth = if (isAmbient) 3f else 2f
+        }
+
+        path.moveTo(0f, (0.22f + abs(14 - (moonAge)).toFloat() * 0.65f / 14) * height + sin(-phase).toFloat() * 9f)
+        val counts = (width / 10).toInt()
+        repeat(counts) {
+            val t = (it + 1).toFloat() / counts
+            path.lineTo(
+                t * width,
+                (0.22f + abs(14 - (moonAge)).toFloat() * 0.65f / 14) * height + sin(t * 18 - phase).toFloat() * 9f
+            )
+        }
+        if (fillWave) {
+            path.lineTo(width, height)
+            path.lineTo(0f, height)
+            path.close()
+        }
+        canvas.drawPath(path, paint)
+    }
+
+    //    private fun getBackground(bounds: Rect): Bitmap? =
+    //        sharedPreferences.getString(PREFERENCE_KEY_BACKGROUND_IMAGE, null)
+    //            ?.toByteArray()
+    //            ?.let {
+    //                val source = BitmapFactory.decodeByteArray(it, 0, it.size)
+    //                val scale =
+    //                    (if (source.width < source.height) bounds.width() else bounds.height()).toFloat() / min(source.width, source.height)
+    //
+    //                if (scale == 1f) {
+    //                    source
+    //                } else {
+    //                    Bitmap.createScaledBitmap(source, (source.width * scale).toInt(), (source.height * scale).toInt(), false).apply {
+    //                        source.recycle()
+    //                    }
+    //                }
+    //            }
+
+    private fun drawComplications(canvas: Canvas, zonedDateTime: ZonedDateTime) {
+        complicationSlotsManager.complicationSlots.forEach { (_, complication) ->
+            //            Timber.d("ngeck complication slot id: ${complication.id}, enabled: ${complication.enabled}, type: ${complication.complicationData.value.type}")
+            if (complication.enabled) {
+                complication.render(canvas, zonedDateTime, renderParameters)
+            }
+        }
+    }
+
+    private fun setDataToLayout(canvas: Canvas, zonedDateTime: ZonedDateTime, moonAge: Double, isAmbient: Boolean) {
         if (renderParameters.watchFaceLayers.contains(WatchFaceLayer.COMPLICATIONS_OVERLAY)) {
             layout.apply {
                 measure(spec.width, spec.height)
@@ -170,13 +203,6 @@ class NocturneWatchCanvasRenderer(
                     }
                 }
                 findViewById<TextView>(R.id.date).text = zonedDateTime.getDateString()
-                findViewById<ImageView>(R.id.wave).also {
-                    val scale = measuredWidth.toFloat() / measuredHeight
-                    it.scaleX = scale
-                    it.scaleY = scale
-                    it.translationY = (0.22f + abs(14 - (moonAge)).toFloat() * 0.65f / 14) * it.measuredHeight - 30f
-                }
-                findViewById<View>(R.id.wave).visibility = if (isAmbient) View.VISIBLE else View.GONE
                 findViewById<TextView>(R.id.moon_age).apply {
                     text = context.getString(R.string.message_moonage, moonAge)
                     visibility = if (showMoonAgeUntil > System.currentTimeMillis()) View.VISIBLE else View.GONE
@@ -184,14 +210,11 @@ class NocturneWatchCanvasRenderer(
                 draw(canvas)
             }
         }
+    }
 
-        val longerSideLength = max(width, height)
-        val milli = zonedDateTime.toInstant().toEpochMilli()
-        val secondF: Float = milli % 60000 * 0.001f
-
+    private fun drawHands(canvas: Canvas, zonedDateTime: ZonedDateTime, screenHalfLength: Float, second: Float, isAmbient: Boolean) {
         if (showLongHand || showShortHand) {
             val radius = 6f
-            val screenHalfLength = longerSideLength / 2
             val shortHandLength = screenHalfLength - 28f
             val paint = Paint().apply {
                 strokeWidth = radius * 2
@@ -210,7 +233,7 @@ class NocturneWatchCanvasRenderer(
                             screenHalfLength + longHandLength * sin(radian).toFloat()
                         )
                     } else {
-                        val radian = PI * (-0.5f + 2 * (zonedDateTime.minute / 60f + secondF / 3600))
+                        val radian = PI * (-0.5f + 2 * (zonedDateTime.minute / 60f + second / 3600))
                         PointF(
                             screenHalfLength + longHandLength * cos(radian).toFloat(),
                             screenHalfLength + longHandLength * sin(radian).toFloat()
@@ -224,7 +247,7 @@ class NocturneWatchCanvasRenderer(
                             screenHalfLength + shortHandLength * sin(radian).toFloat()
                         )
                     } else {
-                        val radian = PI * (-0.5f + 2 * (zonedDateTime.minute / 60f + secondF / 3600))
+                        val radian = PI * (-0.5f + 2 * (zonedDateTime.minute / 60f + second / 3600))
                         PointF(
                             screenHalfLength + shortHandLength * cos(radian).toFloat(),
                             screenHalfLength + shortHandLength * sin(radian).toFloat()
@@ -247,7 +270,7 @@ class NocturneWatchCanvasRenderer(
                             screenHalfLength + shortHandLength * sin(radian).toFloat()
                         )
                     } else {
-                        val radian = PI * (-0.5f + 2 * (zonedDateTime.hour / 12f + zonedDateTime.minute / 720f + secondF / 43200))
+                        val radian = PI * (-0.5f + 2 * (zonedDateTime.hour / 12f + zonedDateTime.minute / 720f + second / 43200))
                         PointF(
                             screenHalfLength + shortHandLength * cos(radian).toFloat(),
                             screenHalfLength + shortHandLength * sin(radian).toFloat()
@@ -262,7 +285,9 @@ class NocturneWatchCanvasRenderer(
                 )
             }
         }
+    }
 
+    private fun drawCircle(canvas: Canvas, zonedDateTime: ZonedDateTime, longerSideLength: Float, second: Float, isAmbient: Boolean) {
         if (isAmbient.not()) {
             val circleRect = RectF(
                 17f,
@@ -272,6 +297,7 @@ class NocturneWatchCanvasRenderer(
             )
             val paint = Paint().apply {
                 strokeWidth = 8f
+                strokeCap = Paint.Cap.ROUND
                 style = Paint.Style.STROKE
                 color = ContextCompat.getColor(context, R.color.circle)
                 isAntiAlias = true
@@ -279,11 +305,11 @@ class NocturneWatchCanvasRenderer(
             val minute = zonedDateTime.minute
             val isOdd = minute % 2 == 1
 
-            if (isOdd && secondF < FRAME_PERIOD_MS_DEFAULT * 0.001) {
+            if (isOdd && second < FRAME_PERIOD_MS_DEFAULT * 0.001) {
                 canvas.drawCircle(circleRect.centerX(), circleRect.centerY(), circleRect.width() / 2, paint)
             } else {
                 var startAngle = -90f
-                var sweepAngle = secondF * 360 / 60
+                var sweepAngle = second * 360 / 60
 
                 if (isOdd) {
                     sweepAngle = 360f - sweepAngle
@@ -295,44 +321,8 @@ class NocturneWatchCanvasRenderer(
         }
     }
 
-    override fun renderHighlightLayer(canvas: Canvas, bounds: Rect, zonedDateTime: ZonedDateTime, sharedAssets: SharedAssets) {
-        canvas.drawColor(renderParameters.highlightLayer!!.backgroundTint)
-
-        complicationSlotsManager.complicationSlots.forEach { (_, complication) ->
-            if (complication.enabled) {
-                complication.renderHighlightLayer(canvas, zonedDateTime, renderParameters)
-            }
-        }
-    }
-
-    private fun getBackground(): Bitmap? =
-        sharedPreferences.getString(PREFERENCE_KEY_BACKGROUND_IMAGE, null)
-            ?.toByteArray()
-            ?.let {
-                val source = BitmapFactory.decodeByteArray(it, 0, it.size)
-                val scale =
-                    (if (source.width < source.height) spec.width else spec.height).toFloat() / min(source.width, source.height)
-
-                if (scale == 1f) {
-                    source
-                } else {
-                    Bitmap.createScaledBitmap(source, (source.width * scale).toInt(), (source.height * scale).toInt(), false).apply {
-                        source.recycle()
-                    }
-                }
-            }
-
     fun showMoonAge() {
         showMoonAgeUntil = System.currentTimeMillis() + 3000
-    }
-
-    // ----- All drawing functions -----
-    private fun drawComplications(canvas: Canvas, zonedDateTime: ZonedDateTime) {
-        complicationSlotsManager.complicationSlots.forEach { (_, complication) ->
-            if (complication.enabled) {
-                complication.render(canvas, zonedDateTime, renderParameters)
-            }
-        }
     }
 
     private fun ZonedDateTime.getDateString(): String =

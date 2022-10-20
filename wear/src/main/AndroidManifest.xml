@@ -65,18 +65,6 @@
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
-
-        <service
-            android:name=".NocturneListenerService"
-            android:exported="true">
-
-            <intent-filter>
-                <action android:name="com.google.android.gms.wearable.DATA_CHANGED" />
-                <data
-                    android:host="*"
-                    android:scheme="wear" />
-            </intent-filter>
-        </service>
     </application>
 
 </manifest>

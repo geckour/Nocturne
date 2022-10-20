@@ -42,19 +42,6 @@
         android:orientation="horizontal"
         app:layout_constraintGuide_percent="0.7518" />
 
-    <ImageView
-        android:id="@+id/wave"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:adjustViewBounds="true"
-        android:scaleType="fitCenter"
-        android:src="@drawable/background"
-        android:tint="@color/backgroundImageAmbientTint"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        tools:translationY="140dp" />
-
     <androidx.appcompat.widget.AppCompatTextView
         android:id="@+id/time_primary"
         android:layout_width="wrap_content"
@@ -75,8 +62,8 @@
         android:textColor="@color/text"
         android:textSize="16sp"
         app:fontFamily="@font/fira_mono"
-        app:layout_constraintEnd_toEndOf="@id/time_primary"
         app:layout_constraintBottom_toTopOf="@id/date"
+        app:layout_constraintEnd_toEndOf="@id/time_primary"
         tools:text="07" />
 
     <androidx.appcompat.widget.AppCompatTextView
@@ -95,8 +82,8 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginBottom="8dp"
-        app:cardCornerRadius="8dp"
         app:cardBackgroundColor="@color/toastBackground"
+        app:cardCornerRadius="8dp"
         app:layout_constraintBottom_toTopOf="@id/guide_time_secondary"
         app:layout_constraintEnd_toEndOf="@id/guide_box_right"
         app:layout_constraintStart_toStartOf="@id/guide_box_left">

@@ -1,8 +1,9 @@
 package com.geckour.nocturne
 
-import android.content.SharedPreferences
+import android.graphics.RectF
 import android.view.SurfaceHolder
 import androidx.preference.PreferenceManager
+import androidx.wear.watchface.CanvasComplicationFactory
 import androidx.wear.watchface.CanvasType
 import androidx.wear.watchface.ComplicationSlot
 import androidx.wear.watchface.ComplicationSlotsManager
@@ -12,6 +13,11 @@ import androidx.wear.watchface.WatchFace
 import androidx.wear.watchface.WatchFaceService
 import androidx.wear.watchface.WatchFaceType
 import androidx.wear.watchface.WatchState
+import androidx.wear.watchface.complications.ComplicationSlotBounds
+import androidx.wear.watchface.complications.DefaultComplicationDataSourcePolicy
+import androidx.wear.watchface.complications.data.ComplicationType
+import androidx.wear.watchface.complications.rendering.CanvasComplicationDrawable
+import androidx.wear.watchface.complications.rendering.ComplicationDrawable
 import androidx.wear.watchface.style.CurrentUserStyleRepository
 import androidx.wear.watchface.style.UserStyleSchema
 import androidx.wear.watchface.style.UserStyleSetting
@@ -50,14 +56,6 @@ class NocturneFaceService : WatchFaceService() {
             )
     }
 
-    private lateinit var sharedPreferences: SharedPreferences
-
-    override fun onCreate() {
-        super.onCreate()
-
-        sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this)
-    }
-
     override fun createUserStyleSchema(): UserStyleSchema =
         UserStyleSchema(
             listOf(
@@ -80,10 +78,8 @@ class NocturneFaceService : WatchFaceService() {
             complicationSlotsManager = complicationSlotsManager,
             currentUserStyleRepository = currentUserStyleRepository,
             canvasType = CanvasType.HARDWARE,
-            sharedPreferences = sharedPreferences
         )
 
-        // Creates the watch face.
         return WatchFace(
             watchFaceType = WatchFaceType.ANALOG,
             renderer = renderer
@@ -106,6 +102,72 @@ class NocturneFaceService : WatchFaceService() {
                     }
                 }
             }
+        )
+    }
+
+    override fun createComplicationSlotsManager(currentUserStyleRepository: CurrentUserStyleRepository): ComplicationSlotsManager {
+        val defaultCanvasComplicationFactory =
+            CanvasComplicationFactory { watchState, invalidateCallback ->
+                CanvasComplicationDrawable(
+                    checkNotNull(ComplicationDrawable.getDrawable(this, R.drawable.complication)),
+                    watchState,
+                    invalidateCallback
+                )
+            }
+        val dataSourcePolicy = DefaultComplicationDataSourcePolicy()
+
+        return ComplicationSlotsManager(
+            listOf(
+                ComplicationSlot.createRoundRectComplicationSlotBuilder(
+                    id = 0,
+                    defaultCanvasComplicationFactory,
+                    listOf(
+                        ComplicationType.SMALL_IMAGE,
+                        ComplicationType.SHORT_TEXT,
+                        ComplicationType.RANGED_VALUE,
+                        ComplicationType.NO_DATA,
+                        ComplicationType.EMPTY,
+                        ComplicationType.NOT_CONFIGURED,
+                    ),
+                    dataSourcePolicy,
+                    ComplicationSlotBounds(
+                        RectF(0.4f, 0.125f, 0.6f, 0.325f)
+                    )
+                ).build(),
+                ComplicationSlot.createRoundRectComplicationSlotBuilder(
+                    id = 1,
+                    defaultCanvasComplicationFactory,
+                    listOf(
+                        ComplicationType.SMALL_IMAGE,
+                        ComplicationType.SHORT_TEXT,
+                        ComplicationType.RANGED_VALUE,
+                        ComplicationType.NO_DATA,
+                        ComplicationType.EMPTY,
+                        ComplicationType.NOT_CONFIGURED,
+                    ),
+                    dataSourcePolicy,
+                    ComplicationSlotBounds(
+                        RectF(0.2f, 0.15f, 0.4f, 0.35f)
+                    )
+                ).build(),
+                ComplicationSlot.createRoundRectComplicationSlotBuilder(
+                    id = 2,
+                    defaultCanvasComplicationFactory,
+                    listOf(
+                        ComplicationType.SMALL_IMAGE,
+                        ComplicationType.SHORT_TEXT,
+                        ComplicationType.RANGED_VALUE,
+                        ComplicationType.NO_DATA,
+                        ComplicationType.EMPTY,
+                        ComplicationType.NOT_CONFIGURED,
+                    ),
+                    dataSourcePolicy,
+                    ComplicationSlotBounds(
+                        RectF(0.6f, 0.15f, 0.8f, 0.35f)
+                    )
+                ).build(),
+            ),
+            currentUserStyleRepository
         )
     }
 }
