@@ -31,6 +31,7 @@ import java.time.DayOfWeek
 import java.time.ZonedDateTime
 import kotlin.math.PI
 import kotlin.math.abs
+import kotlin.math.cos
 import kotlin.math.max
 import kotlin.math.sin
 
@@ -131,23 +132,24 @@ class NocturneWatchCanvasRenderer(
         }
     }
 
-    private fun drawWave(canvas: Canvas, zonedDateTime: ZonedDateTime, width: Float, height: Float, moonAge: Double, isAmbient: Boolean) {
-        val phase = zonedDateTime.toInstant().toEpochMilli() % 5600 * PI / 2800
-        val path = Path()
+    private fun drawWave(canvas: Canvas, zonedDateTime: ZonedDateTime, width: Float, height: Float, moonAge: Float, isAmbient: Boolean) {
         val paint = Paint().apply {
             style = if (fillWave) Paint.Style.FILL else Paint.Style.STROKE
             color = ContextCompat.getColor(context, if (isAmbient) R.color.waveAmbient else R.color.wave)
             isAntiAlias = true
             strokeWidth = if (isAmbient) 3f else 2f
         }
+        val path = Path()
+        val phase = zonedDateTime.toInstant().toEpochMilli() % 5600 * PI / 2800
 
-        path.moveTo(0f, (0.22f + abs(14 - (moonAge)).toFloat() * 0.65f / 14) * height + sin(-phase).toFloat() * 9f)
+        val tideElevation = height - (0.13f + abs(cos(moonAge * PI / 15).toFloat()) * 0.65f) * height
+        path.moveTo(0f, tideElevation + sin(-phase).toFloat() * 9f)
         val counts = (width / 10).toInt()
         repeat(counts) {
             val t = (it + 1).toFloat() / counts
             path.lineTo(
                 t * width,
-                (0.22f + abs(14 - (moonAge)).toFloat() * 0.65f / 14) * height + sin(t * 18 - phase).toFloat() * 9f
+                tideElevation + sin(t * 18 - phase).toFloat() * 9f
             )
         }
         if (fillWave) {
@@ -184,7 +186,7 @@ class NocturneWatchCanvasRenderer(
         }
     }
 
-    private fun setDataToLayout(canvas: Canvas, zonedDateTime: ZonedDateTime, moonAge: Double, isAmbient: Boolean) {
+    private fun setDataToLayout(canvas: Canvas, zonedDateTime: ZonedDateTime, moonAge: Float, isAmbient: Boolean) {
         if (renderParameters.watchFaceLayers.contains(WatchFaceLayer.COMPLICATIONS_OVERLAY)) {
             layout.apply {
                 measure(spec.width, spec.height)

@@ -5,7 +5,7 @@ import java.util.*
 import kotlin.math.cos
 import kotlin.math.floor
 
-fun ZonedDateTime.moonAge(): Double {
+fun ZonedDateTime.moonAge(): Float {
     val t = getJapaneseDay(year, monthValue, dayOfMonth.toDouble()) - getJapaneseDay(2000, 1, 1.5)
     var dm = floor((t.toDouble().toMoonLong() - t.toDouble().toSunLong()).let { if (it < 0.0) it + 360.0 else it } / 13.5) - 1
     var dStep = 1.0
@@ -25,7 +25,7 @@ fun ZonedDateTime.moonAge(): Double {
     a0 -= 360.0
     dm += dStep * a0 / (a1 - a0) // 朔を越えたら直線近似で朔の時刻を求める
 
-    return dm
+    return dm.toFloat()
 }
 
 private fun Double.toMoonLong(): Double {
