@@ -1,6 +1,7 @@
 package com.geckour.nocturne
 
 import android.content.Context
+import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
@@ -72,6 +73,7 @@ class NocturneWatchCanvasRenderer(
     private var circleType = CircleType.default
     private var latestDrawMode: DrawMode = DrawMode.INTERACTIVE
     private var zonedDateTimeOnStartedAmbient: ZonedDateTime? = null
+    private var backgroundImageBytes: ByteArray? = null
 
     override suspend fun init() {
         super.init()
@@ -100,12 +102,10 @@ class NocturneWatchCanvasRenderer(
 
         canvas.drawColor(getBackgroundColor(isAmbient))
 
-        //        getBackground(bounds)?.let {
-        //            canvas.drawBitmap(it, 0f, 0f, Paint())
-        //        }
-
         val width = bounds.height().toFloat()
         val height = bounds.height().toFloat()
+
+        drawBackgroundImage(canvas, width, height, isAmbient)
 
         drawWave(canvas, if (isAmbient) zonedDateTimeOnStartedAmbient ?: zonedDateTime else zonedDateTime, width, height, moonAge, isAmbient)
 
@@ -132,7 +132,7 @@ class NocturneWatchCanvasRenderer(
         }
     }
 
-    private fun drawWave(canvas: Canvas, zonedDateTime: ZonedDateTime, width: Float, height: Float, moonAge: Float, isAmbient: Boolean) {
+    private fun drawWave(canvas: Canvas, zonedDateTime: ZonedDateTime, screenWidth: Float, screenHeight: Float, moonAge: Float, isAmbient: Boolean) {
         val paint = Paint().apply {
             style = if (fillWave) Paint.Style.FILL else Paint.Style.STROKE
             color = ContextCompat.getColor(context, if (isAmbient) R.color.waveAmbient else R.color.wave)
@@ -142,48 +142,62 @@ class NocturneWatchCanvasRenderer(
         val path = Path()
         val phase = zonedDateTime.toInstant().toEpochMilli() % 5600 * PI / 2800
 
-        val tideElevation = height - (0.13f + abs(cos(moonAge * PI / 15).toFloat()) * 0.65f) * height
+        val tideElevation = screenHeight - (0.13f + abs(cos(moonAge * PI / 15).toFloat()) * 0.65f) * screenHeight
         path.moveTo(0f, tideElevation + sin(-phase).toFloat() * 9f)
-        val counts = (width / 10).toInt()
+        val counts = (screenWidth / 10).toInt()
         repeat(counts) {
             val t = (it + 1).toFloat() / counts
             path.lineTo(
-                t * width,
+                t * screenWidth,
                 tideElevation + sin(t * 18 - phase).toFloat() * 9f
             )
         }
         if (fillWave) {
-            path.lineTo(width, height)
-            path.lineTo(0f, height)
+            path.lineTo(screenWidth, screenHeight)
+            path.lineTo(0f, screenHeight)
             path.close()
         }
         canvas.drawPath(path, paint)
     }
 
-    //    private fun getBackground(bounds: Rect): Bitmap? =
-    //        sharedPreferences.getString(PREFERENCE_KEY_BACKGROUND_IMAGE, null)
-    //            ?.toByteArray()
-    //            ?.let {
-    //                val source = BitmapFactory.decodeByteArray(it, 0, it.size)
-    //                val scale =
-    //                    (if (source.width < source.height) bounds.width() else bounds.height()).toFloat() / min(source.width, source.height)
-    //
-    //                if (scale == 1f) {
-    //                    source
-    //                } else {
-    //                    Bitmap.createScaledBitmap(source, (source.width * scale).toInt(), (source.height * scale).toInt(), false).apply {
-    //                        source.recycle()
-    //                    }
-    //                }
-    //            }
-
     private fun drawComplications(canvas: Canvas, zonedDateTime: ZonedDateTime) {
         complicationSlotsManager.complicationSlots.forEach { (_, complication) ->
-            //            Timber.d("ngeck complication slot id: ${complication.id}, enabled: ${complication.enabled}, type: ${complication.complicationData.value.type}")
             if (complication.enabled) {
                 complication.render(canvas, zonedDateTime, renderParameters)
             }
         }
+    }
+
+    private fun drawBackgroundImage(canvas: Canvas, screenWidth: Float, screenHeight: Float, isAmbient: Boolean) {
+        backgroundImageBytes?.let {
+            val bitmap = BitmapFactory.decodeByteArray(it, 0, it.size)
+            val (cropWidth, cropHeight) = when {
+                screenWidth / screenHeight > bitmap.width.toFloat() / bitmap.height -> {
+                    bitmap.width.toFloat() to bitmap.width * screenHeight / screenWidth
+                }
+                else -> {
+                    bitmap.height * screenWidth / screenHeight to bitmap.height.toFloat()
+                }
+            }
+            val offsetWidth = ((bitmap.width - cropWidth) / 2).toInt()
+            val offsetHeight = ((bitmap.height - cropHeight) / 2).toInt()
+            val srcRect = Rect(offsetWidth, offsetHeight, bitmap.width - offsetWidth, bitmap.height - offsetHeight)
+            val destRect = RectF(0f, 0f, screenWidth, screenHeight)
+            canvas.drawBitmap(
+                bitmap,
+                srcRect,
+                destRect,
+                Paint()
+            )
+
+            if (isAmbient) {
+                canvas.drawColor(Color.parseColor("#c8000000"))
+            }
+        }
+    }
+
+    internal fun setBackground(backgroundImageBytes: ByteArray?) {
+        this.backgroundImageBytes = if (backgroundImageBytes?.isEmpty() == true) null else backgroundImageBytes
     }
 
     private fun setDataToLayout(canvas: Canvas, zonedDateTime: ZonedDateTime, moonAge: Float, isAmbient: Boolean) {

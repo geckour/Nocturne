@@ -1,5 +1,6 @@
 package com.geckour.nocturne
 
+import android.content.Context
 import android.graphics.RectF
 import android.view.SurfaceHolder
 import androidx.wear.watchface.CanvasComplicationFactory
@@ -21,12 +22,16 @@ import androidx.wear.watchface.style.CurrentUserStyleRepository
 import androidx.wear.watchface.style.UserStyleSchema
 import androidx.wear.watchface.style.UserStyleSetting
 import androidx.wear.watchface.style.WatchFaceLayer
+import com.google.android.gms.wearable.Asset
+import com.google.android.gms.wearable.DataMapItem
+import com.google.android.gms.wearable.Wearable
+import kotlinx.coroutines.tasks.await
 
 class NocturneFaceService : WatchFaceService() {
 
     companion object {
 
-        private const val PREF_KEY_CIRCLE_TYPE = "pref_key_circle_type"
+        private const val DATA_PATH_BACKGROUND_IMAGE = "/data/background_image"
 
         val fillWaveSetting =
             UserStyleSetting.BooleanUserStyleSetting(
@@ -72,6 +77,19 @@ class NocturneFaceService : WatchFaceService() {
             currentUserStyleRepository = currentUserStyleRepository,
             canvasType = CanvasType.HARDWARE
         )
+
+        val backgroundImageBytes = Wearable.getDataClient(this)
+            .dataItems
+            .await()
+            .first { it.uri.path == DATA_PATH_BACKGROUND_IMAGE }
+            .let { dataItem ->
+                DataMapItem.fromDataItem(dataItem)
+                    .dataMap
+                    .getAsset("value")
+                    ?.toByteArray(this)
+            }
+
+        renderer.setBackground(backgroundImageBytes)
 
         return WatchFace(
             watchFaceType = WatchFaceType.ANALOG,
@@ -123,9 +141,7 @@ class NocturneFaceService : WatchFaceService() {
                         ComplicationType.NOT_CONFIGURED,
                     ),
                     dataSourcePolicy,
-                    ComplicationSlotBounds(
-                        RectF(0.4f, 0.125f, 0.6f, 0.325f)
-                    )
+                    ComplicationSlotBounds(RectF(0.4f, 0.125f, 0.6f, 0.325f))
                 ).build(),
                 ComplicationSlot.createRoundRectComplicationSlotBuilder(
                     id = 1,
@@ -139,9 +155,7 @@ class NocturneFaceService : WatchFaceService() {
                         ComplicationType.NOT_CONFIGURED,
                     ),
                     dataSourcePolicy,
-                    ComplicationSlotBounds(
-                        RectF(0.2f, 0.15f, 0.4f, 0.35f)
-                    )
+                    ComplicationSlotBounds(RectF(0.2f, 0.15f, 0.4f, 0.35f))
                 ).build(),
                 ComplicationSlot.createRoundRectComplicationSlotBuilder(
                     id = 2,
@@ -155,12 +169,17 @@ class NocturneFaceService : WatchFaceService() {
                         ComplicationType.NOT_CONFIGURED,
                     ),
                     dataSourcePolicy,
-                    ComplicationSlotBounds(
-                        RectF(0.6f, 0.15f, 0.8f, 0.35f)
-                    )
+                    ComplicationSlotBounds(RectF(0.6f, 0.15f, 0.8f, 0.35f))
                 ).build(),
             ),
             currentUserStyleRepository
         )
     }
+
+    private suspend fun Asset.toByteArray(context: Context): ByteArray =
+        Wearable.getDataClient(context)
+            .getFdForAsset(this@toByteArray)
+            .await()
+            .inputStream
+            .readBytes()
 }

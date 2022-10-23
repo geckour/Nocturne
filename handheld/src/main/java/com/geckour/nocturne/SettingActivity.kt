@@ -33,6 +33,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.preference.PreferenceManager
 import coil.Coil
 import coil.request.ImageRequest
+import coil.size.Scale
 import com.google.android.gms.wearable.Asset
 import com.google.android.gms.wearable.PutDataMapRequest
 import com.google.android.gms.wearable.Wearable
@@ -54,6 +55,8 @@ class SettingActivity : AppCompatActivity() {
             (Coil.imageLoader(this@SettingActivity).execute(
                 ImageRequest.Builder(this@SettingActivity)
                     .data(uri)
+                    .size(400)
+                    .scale(Scale.FIT)
                     .allowHardware(false)
                     .build()
             ).drawable as BitmapDrawable?)?.bitmap?.let {
@@ -93,18 +96,21 @@ class SettingActivity : AppCompatActivity() {
                     contentScale = ContentScale.FillWidth
                 )
                 LazyColumn(Modifier.fillMaxSize()) {
-//                    item {
-//                        SettingItem(title = "Set background image") {
-//                            pickMedia.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
-//                        }
-//                    }
-//                    item {
-//                        SettingItem(title = "Clear background image") {
-//                            Wearable.getDataClient(this@SettingActivity).putDataItem(PutDataMapRequest.create(DATA_PATH_BACKGROUND_IMAGE).apply {
-//                                dataMap.putAsset("value", Asset.createFromBytes(byteArrayOf()))
-//                            }.asPutDataRequest())
-//                        }
-//                    }
+                    item {
+                        SettingItem(title = "Set background image") {
+                            pickMedia.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                        }
+                    }
+                    item {
+                        SettingItem(title = "Clear background image") {
+                            Wearable.getDataClient(this@SettingActivity)
+                                .putDataItem(
+                                    PutDataMapRequest.create(DATA_PATH_BACKGROUND_IMAGE).apply {
+                                        dataMap.putAsset("value", Asset.createFromBytes(byteArrayOf()))
+                                    }.asPutDataRequest()
+                                )
+                        }
+                    }
                 }
             }
         }
