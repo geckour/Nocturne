@@ -81,8 +81,8 @@ class NocturneFaceService : WatchFaceService() {
         val backgroundImageBytes = Wearable.getDataClient(this)
             .dataItems
             .await()
-            .first { it.uri.path == DATA_PATH_BACKGROUND_IMAGE }
-            .let { dataItem ->
+            .firstOrNull { it.uri.path == DATA_PATH_BACKGROUND_IMAGE }
+            ?.let { dataItem ->
                 DataMapItem.fromDataItem(dataItem)
                     .dataMap
                     .getAsset("value")
