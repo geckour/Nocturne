@@ -13,8 +13,8 @@ android {
         applicationId "com.geckour.nocturne"
         targetSdkVersion 33
         minSdkVersion 26
-        versionCode 330100400
-        versionName "1.4.0"
+        versionCode 330100401
+        versionName "1.4.1"
     }
 
     compileOptions {

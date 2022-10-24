@@ -10,8 +10,7 @@
   See the License for the specific language governing permissions and
   limitations under the License.
   -->
-<drawable xmlns:app="http://schemas.android.com/apk/res-auto"
-    class="androidx.wear.watchface.complications.rendering.ComplicationDrawable"
+<androidx.wear.watchface.complications.rendering.ComplicationDrawable xmlns:app="http://schemas.android.com/apk/res-auto"
     app:borderStyle="none"
     app:highlightColor="@color/colorAccent"
     app:iconColor="@color/text"
@@ -22,6 +21,7 @@
     app:textTypeface="sans-serif-condensed"
     app:titleColor="@color/text"
     app:titleTypeface="sans-serif-condensed">
+
     <ambient
         app:borderColor="@color/text"
         app:iconColor="@color/text"
@@ -29,4 +29,4 @@
         app:rangedValueSecondaryColor="@android:color/transparent"
         app:textColor="@color/text"
         app:titleColor="@color/text" />
-</drawable>
+</androidx.wear.watchface.complications.rendering.ComplicationDrawable>
