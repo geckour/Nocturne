@@ -13,8 +13,8 @@ android {
         applicationId "com.geckour.nocturne"
         targetSdkVersion 33
         minSdkVersion 26
-        versionCode 330100300
-        versionName "1.3.0"
+        versionCode 330100400
+        versionName "1.4.0"
     }
 
     compileOptions {
@@ -98,4 +98,5 @@ dependencies {
     implementation "androidx.wear.compose:compose-foundation:1.1.0-alpha07"
     implementation "androidx.wear.compose:compose-material:1.1.0-alpha07"
     implementation "com.google.android.horologist:horologist-compose-layout:0.1.13"
+    implementation files('libs/AstroLib.jar')
 }

@@ -98,7 +98,7 @@ class NocturneWatchCanvasRenderer(
         if (isAmbient && latestDrawMode != renderParameters.drawMode) {
             zonedDateTimeOnStartedAmbient = zonedDateTime
         }
-        val moonAge = zonedDateTime.moonAge()
+        val moonAge = zonedDateTime.moonAge
 
         canvas.drawColor(getBackgroundColor(isAmbient))
 
