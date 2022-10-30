@@ -6,24 +6,18 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Path
-import android.graphics.Point
 import android.graphics.Rect
 import android.graphics.RectF
-import android.util.Size
-import android.view.LayoutInflater
 import android.view.SurfaceHolder
 import android.view.View
-import android.view.WindowManager
-import android.widget.TextView
 import androidx.core.content.ContextCompat
-import androidx.core.content.getSystemService
+import androidx.core.graphics.toRectF
 import androidx.wear.watchface.ComplicationSlotsManager
 import androidx.wear.watchface.DrawMode
 import androidx.wear.watchface.Renderer
 import androidx.wear.watchface.WatchState
 import androidx.wear.watchface.style.CurrentUserStyleRepository
 import androidx.wear.watchface.style.UserStyleSetting
-import androidx.wear.watchface.style.WatchFaceLayer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -59,21 +53,47 @@ class NocturneWatchCanvasRenderer(
     true
 ) {
 
-    private val spec: Size = Point().apply { context.getSystemService<WindowManager>()?.defaultDisplay?.getSize(this) }
-        .let {
-            Size(
-                View.MeasureSpec.makeMeasureSpec(it.x, View.MeasureSpec.EXACTLY),
-                View.MeasureSpec.makeMeasureSpec(it.y, View.MeasureSpec.EXACTLY)
-            )
-        }
-
-    private val layout: View = LayoutInflater.from(context).inflate(R.layout.face_main, null)
     private var showMoonAgeUntil: Long = 0
     private var fillWave = true
     private var circleType = CircleType.default
     private var latestDrawMode: DrawMode = DrawMode.INTERACTIVE
     private var zonedDateTimeOnStartedAmbient: ZonedDateTime? = null
     private var backgroundImageBytes: ByteArray? = null
+    private val timeFont = context.resources.getFont(R.font.fira_mono)
+    private val timeColor = context.getColor(R.color.text)
+    private val primaryTimePaint = Paint().apply {
+        isAntiAlias = true
+        typeface = timeFont
+        textSize = 44 * context.resources.displayMetrics.scaledDensity
+        textAlign = Paint.Align.CENTER
+        color = timeColor
+
+    }
+    private val secondaryTimePaint = Paint().apply {
+        isAntiAlias = true
+        typeface = timeFont
+        textSize = 16 * context.resources.displayMetrics.scaledDensity
+        textAlign = Paint.Align.RIGHT
+        color = timeColor
+    }
+    private val datePaint = Paint().apply {
+        isAntiAlias = true
+        typeface = timeFont
+        textSize = 12 * context.resources.displayMetrics.scaledDensity
+        textAlign = Paint.Align.CENTER
+        color = timeColor
+    }
+    private val moonAgeTextPaint = Paint().apply {
+        isAntiAlias = true
+        typeface = timeFont
+        textSize = 12 * context.resources.displayMetrics.scaledDensity
+        textAlign = Paint.Align.CENTER
+        color = timeColor
+    }
+    private val moonAgeBgPaint = Paint().apply {
+        isAntiAlias = true
+        color = context.getColor(R.color.toastBackground)
+    }
 
     override suspend fun init() {
         super.init()
@@ -100,24 +120,26 @@ class NocturneWatchCanvasRenderer(
         }
         val moonAge = zonedDateTime.moonAge
 
-        canvas.drawColor(getBackgroundColor(isAmbient))
-
         val width = bounds.height().toFloat()
         val height = bounds.height().toFloat()
+        val longerSideLength = max(width, height)
+
+        canvas.drawColor(getBackgroundColor(isAmbient))
 
         drawBackgroundImage(canvas, width, height, isAmbient)
 
         drawWave(canvas, if (isAmbient) zonedDateTimeOnStartedAmbient ?: zonedDateTime else zonedDateTime, width, height, moonAge, isAmbient)
 
-        // CanvasComplicationDrawable already obeys rendererParameters.
+        drawPrimaryTime(canvas, zonedDateTime, longerSideLength)
+        drawSecondaryTime(canvas, zonedDateTime, longerSideLength, isAmbient)
+        drawDate(canvas, zonedDateTime, longerSideLength)
+
         drawComplications(canvas, zonedDateTime)
 
-        setDataToLayout(canvas, zonedDateTime, moonAge, isAmbient)
-
-        val longerSideLength = max(width, height)
         val secondF: Float = zonedDateTime.toInstant().toEpochMilli() % 60000 * 0.001f
-
         drawCircle(canvas, zonedDateTime, secondF, longerSideLength, isAmbient)
+
+        drawMoonAge(canvas, longerSideLength, moonAge)
 
         latestDrawMode = renderParameters.drawMode
     }
@@ -130,34 +152,6 @@ class NocturneWatchCanvasRenderer(
                 complication.renderHighlightLayer(canvas, zonedDateTime, renderParameters)
             }
         }
-    }
-
-    private fun drawWave(canvas: Canvas, zonedDateTime: ZonedDateTime, screenWidth: Float, screenHeight: Float, moonAge: Float, isAmbient: Boolean) {
-        val paint = Paint().apply {
-            style = if (fillWave) Paint.Style.FILL else Paint.Style.STROKE
-            color = ContextCompat.getColor(context, if (isAmbient) R.color.waveAmbient else R.color.wave)
-            isAntiAlias = true
-            strokeWidth = if (isAmbient) 3f else 2f
-        }
-        val path = Path()
-        val phase = zonedDateTime.toInstant().toEpochMilli() % 5600 * PI / 2800
-
-        val tideElevation = screenHeight - (0.13f + abs(cos(moonAge * PI / 15).toFloat()) * 0.65f) * screenHeight
-        path.moveTo(0f, tideElevation + sin(-phase).toFloat() * 9f)
-        val counts = (screenWidth / 10).toInt()
-        repeat(counts) {
-            val t = (it + 1).toFloat() / counts
-            path.lineTo(
-                t * screenWidth,
-                tideElevation + sin(t * 18 - phase).toFloat() * 9f
-            )
-        }
-        if (fillWave) {
-            path.lineTo(screenWidth, screenHeight)
-            path.lineTo(0f, screenHeight)
-            path.close()
-        }
-        canvas.drawPath(path, paint)
     }
 
     private fun drawComplications(canvas: Canvas, zonedDateTime: ZonedDateTime) {
@@ -200,28 +194,62 @@ class NocturneWatchCanvasRenderer(
         this.backgroundImageBytes = if (backgroundImageBytes?.isEmpty() == true) null else backgroundImageBytes
     }
 
-    private fun setDataToLayout(canvas: Canvas, zonedDateTime: ZonedDateTime, moonAge: Float, isAmbient: Boolean) {
-        if (renderParameters.watchFaceLayers.contains(WatchFaceLayer.COMPLICATIONS_OVERLAY)) {
-            layout.apply {
-                measure(spec.width, spec.height)
-                layout(0, 0, measuredWidth, measuredHeight)
-                findViewById<TextView>(R.id.time_primary).text = zonedDateTime.getPrimaryTimeString()
-                findViewById<TextView>(R.id.time_secondary).apply {
-                    if (isAmbient) {
-                        visibility = View.GONE
-                    } else {
-                        visibility = View.VISIBLE
-                        text = zonedDateTime.getTimeSecondString()
-                    }
-                }
-                findViewById<TextView>(R.id.date).text = zonedDateTime.getDateString()
-                findViewById<TextView>(R.id.moon_age).apply {
-                    text = context.getString(R.string.message_moonage, moonAge)
-                    visibility = if (showMoonAgeUntil > System.currentTimeMillis()) View.VISIBLE else View.GONE
-                }
-                draw(canvas)
-            }
+    private fun drawWave(canvas: Canvas, zonedDateTime: ZonedDateTime, screenWidth: Float, screenHeight: Float, moonAge: Float, isAmbient: Boolean) {
+        val paint = Paint().apply {
+            style = if (fillWave) Paint.Style.FILL else Paint.Style.STROKE
+            color = ContextCompat.getColor(context, if (isAmbient) R.color.waveAmbient else R.color.wave)
+            isAntiAlias = true
+            strokeWidth = if (isAmbient) 3f else 2f
         }
+        val path = Path()
+        val phase = zonedDateTime.toInstant().toEpochMilli() % 5600 * PI / 2800
+
+        val tideElevation = screenHeight - (0.13f + abs(cos(moonAge * PI / 15).toFloat()) * 0.65f) * screenHeight
+        path.moveTo(0f, tideElevation + sin(-phase).toFloat() * 9f)
+        val counts = (screenWidth / 10).toInt()
+        repeat(counts) {
+            val t = (it + 1).toFloat() / counts
+            path.lineTo(
+                t * screenWidth,
+                tideElevation + sin(t * 18 - phase).toFloat() * 9f
+            )
+        }
+        if (fillWave) {
+            path.lineTo(screenWidth, screenHeight)
+            path.lineTo(0f, screenHeight)
+            path.close()
+        }
+        canvas.drawPath(path, paint)
+    }
+
+    private fun drawPrimaryTime(canvas: Canvas, zonedDateTime: ZonedDateTime, longerSideLength: Float) {
+        canvas.drawText(
+            zonedDateTime.getTimePrimaryString(),
+            longerSideLength / 2,
+            (longerSideLength - (primaryTimePaint.descent() + primaryTimePaint.ascent())) / 2,
+            primaryTimePaint
+        )
+    }
+
+    private fun drawSecondaryTime(canvas: Canvas, zonedDateTime: ZonedDateTime, longerSideLength: Float, isAmbient: Boolean) {
+        if (isAmbient.not()) {
+            val primaryTextWidth = primaryTimePaint.measureText(zonedDateTime.getTimePrimaryString())
+            canvas.drawText(
+                zonedDateTime.getTimeSecondString(),
+                (longerSideLength + primaryTextWidth) / 2,
+                longerSideLength / 2 + primaryTimePaint.descent() + abs(secondaryTimePaint.ascent()) + 24,
+                secondaryTimePaint
+            )
+        }
+    }
+
+    private fun drawDate(canvas: Canvas, zonedDateTime: ZonedDateTime, longerSideLength: Float) {
+        canvas.drawText(
+            zonedDateTime.getDateString(),
+            longerSideLength / 2,
+            longerSideLength * 0.85f,
+            datePaint
+        )
     }
 
     private fun drawCircle(canvas: Canvas, zonedDateTime: ZonedDateTime, second: Float, longerSideLength: Float, isAmbient: Boolean) {
@@ -287,14 +315,36 @@ class NocturneWatchCanvasRenderer(
         }
     }
 
-    fun showMoonAge() {
+    private fun drawMoonAge(canvas: Canvas, longerSideLength: Float, moonAge: Float) {
+        val grace = showMoonAgeUntil - System.currentTimeMillis()
+        val alpha = when (grace) {
+            in 2800..3000 -> 255f * (3000 - grace) / 200f
+            in 200..2800 -> 255f
+            in 0..200 -> 255f * grace / 200f
+            else -> 0f
+        }.toInt()
+        if (showMoonAgeUntil > System.currentTimeMillis()) View.VISIBLE else View.GONE
+        val moonAgeText = context.getString(R.string.message_moonage, moonAge)
+        val bgBounds = Rect().apply {
+            moonAgeTextPaint.getTextBounds(moonAgeText, 0, moonAgeText.length, this)
+            inset(-24, -18)
+            offsetTo(
+                ((longerSideLength - width()) / 2).toInt(),
+                (longerSideLength * 0.72f - (height() - moonAgeTextPaint.ascent() - moonAgeTextPaint.descent()) / 2).toInt()
+            )
+        }
+        canvas.drawRoundRect(bgBounds.toRectF(), 12f, 12f, moonAgeBgPaint.apply { this.alpha = alpha })
+        canvas.drawText(moonAgeText, longerSideLength / 2, longerSideLength * 0.72f, moonAgeTextPaint.apply { this.alpha = alpha })
+    }
+
+    internal fun showMoonAge() {
         showMoonAgeUntil = System.currentTimeMillis() + 3000
     }
 
     private fun ZonedDateTime.getDateString(): String =
         "%04d-%02d-%02d %s".format(year, monthValue, dayOfMonth, getDayString())
 
-    private fun ZonedDateTime.getPrimaryTimeString(): String =
+    private fun ZonedDateTime.getTimePrimaryString(): String =
         "%02d:%02d".format(hour, minute)
 
     private fun ZonedDateTime.getTimeSecondString(): String =
