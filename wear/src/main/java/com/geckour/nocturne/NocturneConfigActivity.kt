@@ -9,7 +9,6 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -208,45 +207,41 @@ class NocturneConfigActivity : AppCompatActivity() {
     ) {
         actualBounds ?: return
 
-        Box(modifier = modifier.size(28.dp)) {
-            Button(
-                modifier = Modifier.fillMaxSize(),
-                colors = ButtonDefaults.buttonColors(
-                    backgroundColor = colorResource(id = android.R.color.transparent),
-                    contentColor = colorResource(id = R.color.text)
-                ),
-                border = ButtonDefaults.buttonBorder(borderStroke = BorderStroke(2.dp, colorResource(id = R.color.colorAccent))),
-                onClick = {
-                    coroutineScope.launch {
-                        editorSession?.openComplicationDataSourceChooser(id)
-                    }
+        Button(
+            modifier = modifier.size(28.dp),
+            colors = ButtonDefaults.buttonColors(
+                backgroundColor = colorResource(id = android.R.color.transparent),
+                contentColor = colorResource(id = R.color.text)
+            ),
+            border = ButtonDefaults.buttonBorder(borderStroke = BorderStroke(2.dp, colorResource(id = R.color.colorAccent))),
+            onClick = {
+                coroutineScope.launch {
+                    editorSession?.openComplicationDataSourceChooser(id)
                 }
-            ) {
-                when (complicationData?.type) {
-                    null,
-                    ComplicationType.NO_DATA,
-                    ComplicationType.NOT_CONFIGURED,
-                    ComplicationType.EMPTY -> {
-                        Icon(imageVector = Icons.Rounded.Add, "Add additional function")
-                    }
-                    else -> {
-                        ComplicationDrawable(
-                            this@NocturneConfigActivity
-                        ).run {
-                            bounds = actualBounds
-                            setComplicationData(complicationData, false)
-                            Image(
-                                modifier = Modifier.fillMaxSize(),
-                                bitmap = current
-                                    .toBitmap(
-                                        width = actualBounds.width(),
-                                        height = actualBounds.height(),
-                                        config = Bitmap.Config.ARGB_8888
-                                    )
-                                    .asImageBitmap(),
-                                contentDescription = "Additional function preview"
-                            )
-                        }
+            }
+        ) {
+            when (complicationData?.type) {
+                null,
+                ComplicationType.NO_DATA,
+                ComplicationType.NOT_CONFIGURED,
+                ComplicationType.EMPTY -> {
+                    Icon(imageVector = Icons.Rounded.Add, "Add additional function")
+                }
+                else -> {
+                    ComplicationDrawable(this@NocturneConfigActivity).run {
+                        bounds = actualBounds
+                        setComplicationData(complicationData, false)
+                        Image(
+                            modifier = Modifier.fillMaxSize(),
+                            bitmap = current
+                                .toBitmap(
+                                    width = actualBounds.width(),
+                                    height = actualBounds.height(),
+                                    config = Bitmap.Config.ARGB_8888
+                                )
+                                .asImageBitmap(),
+                            contentDescription = "Additional function preview"
+                        )
                     }
                 }
             }

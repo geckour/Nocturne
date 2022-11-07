@@ -147,11 +147,7 @@ class NocturneWatchCanvasRenderer(
     override fun renderHighlightLayer(canvas: Canvas, bounds: Rect, zonedDateTime: ZonedDateTime, sharedAssets: SharedAssets) {
         canvas.drawColor(renderParameters.highlightLayer!!.backgroundTint)
 
-        complicationSlotsManager.complicationSlots.forEach { (_, complication) ->
-            if (complication.enabled) {
-                complication.renderHighlightLayer(canvas, zonedDateTime, renderParameters)
-            }
-        }
+        drawComplications(canvas, zonedDateTime)
     }
 
     private fun drawComplications(canvas: Canvas, zonedDateTime: ZonedDateTime) {
