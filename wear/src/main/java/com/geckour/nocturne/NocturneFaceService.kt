@@ -25,6 +25,10 @@ import androidx.wear.watchface.style.WatchFaceLayer
 import com.google.android.gms.wearable.Asset
 import com.google.android.gms.wearable.DataMapItem
 import com.google.android.gms.wearable.Wearable
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
 class NocturneFaceService : WatchFaceService() {
@@ -78,18 +82,21 @@ class NocturneFaceService : WatchFaceService() {
             canvasType = CanvasType.HARDWARE
         )
 
-        val backgroundImageBytes = Wearable.getDataClient(this)
-            .dataItems
-            .await()
-            .firstOrNull { it.uri.path == DATA_PATH_BACKGROUND_IMAGE }
-            ?.let { dataItem ->
-                DataMapItem.fromDataItem(dataItem)
-                    .dataMap
-                    .getAsset("value")
-                    ?.toByteArray(this)
-            }
+        Wearable.getDataClient(this)
+            .addListener { buffer ->
+                CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate).launch {
+                    val backgroundImageBytes = buffer.firstOrNull { it.dataItem.uri.path == DATA_PATH_BACKGROUND_IMAGE }
+                        ?.let { dataEvent ->
+                            DataMapItem.fromDataItem(dataEvent.dataItem)
+                                .dataMap
+                                .getAsset("value")
+                        }
+                        ?.toByteArray(this@NocturneFaceService)
 
-        renderer.setBackground(backgroundImageBytes)
+                    renderer.setBackground(backgroundImageBytes)
+                }
+            }
+            .await()
 
         return WatchFace(
             watchFaceType = WatchFaceType.ANALOG,

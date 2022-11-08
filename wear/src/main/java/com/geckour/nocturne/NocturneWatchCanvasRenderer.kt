@@ -1,6 +1,7 @@
 package com.geckour.nocturne
 
 import android.content.Context
+import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Color
@@ -58,7 +59,14 @@ class NocturneWatchCanvasRenderer(
     private var circleType = CircleType.default
     private var latestDrawMode: DrawMode = DrawMode.INTERACTIVE
     private var zonedDateTimeOnStartedAmbient: ZonedDateTime? = null
-    private var backgroundImageBytes: ByteArray? = null
+    private var backgroundImage: Bitmap? = null
+        set(value) {
+            field = value
+            if (value == null) {
+                backgroundCropSrcRect = Rect()
+                backgroundCropDestRect = RectF()
+            }
+        }
     private val timeFont = context.resources.getFont(R.font.fira_mono)
     private val timeColor = context.getColor(R.color.text)
     private val primaryTimePaint = Paint().apply {
@@ -94,6 +102,9 @@ class NocturneWatchCanvasRenderer(
         isAntiAlias = true
         color = context.getColor(R.color.toastBackground)
     }
+
+    private var backgroundCropSrcRect = Rect()
+    private var backgroundCropDestRect = RectF()
 
     override suspend fun init() {
         super.init()
@@ -159,25 +170,17 @@ class NocturneWatchCanvasRenderer(
     }
 
     private fun drawBackgroundImage(canvas: Canvas, screenWidth: Float, screenHeight: Float, isAmbient: Boolean) {
-        backgroundImageBytes?.let {
-            val bitmap = BitmapFactory.decodeByteArray(it, 0, it.size)
-            val (cropWidth, cropHeight) = when {
-                screenWidth / screenHeight > bitmap.width.toFloat() / bitmap.height -> {
-                    bitmap.width.toFloat() to bitmap.width * screenHeight / screenWidth
-                }
-                else -> {
-                    bitmap.height * screenWidth / screenHeight to bitmap.height.toFloat()
-                }
-            }
-            val offsetWidth = ((bitmap.width - cropWidth) / 2).toInt()
-            val offsetHeight = ((bitmap.height - cropHeight) / 2).toInt()
-            val srcRect = Rect(offsetWidth, offsetHeight, bitmap.width - offsetWidth, bitmap.height - offsetHeight)
-            val destRect = RectF(0f, 0f, screenWidth, screenHeight)
+        backgroundImage?.let { bitmap ->
+            if (backgroundCropSrcRect == Rect()) backgroundCropSrcRect = bitmap.getCropSrcRect(screenWidth, screenHeight)
+            if (backgroundCropDestRect == RectF()) backgroundCropDestRect = RectF(0f, 0f, screenWidth, screenHeight)
             canvas.drawBitmap(
                 bitmap,
-                srcRect,
-                destRect,
-                Paint()
+                backgroundCropSrcRect,
+                backgroundCropDestRect,
+                Paint().apply {
+                    isAntiAlias = false
+                    isFilterBitmap = isAmbient.not()
+                }
             )
 
             if (isAmbient) {
@@ -186,8 +189,24 @@ class NocturneWatchCanvasRenderer(
         }
     }
 
+    private fun Bitmap.getCropSrcRect(screenWidth: Float, screenHeight: Float): Rect {
+        val (cropWidth, cropHeight) = when {
+            screenWidth / screenHeight > width.toFloat() / height -> {
+                width.toFloat() to width * screenHeight / screenWidth
+            }
+            else -> {
+                height * screenWidth / screenHeight to height.toFloat()
+            }
+        }
+        val offsetWidth = ((width - cropWidth) / 2).toInt()
+        val offsetHeight = ((height - cropHeight) / 2).toInt()
+        return Rect(offsetWidth, offsetHeight, width - offsetWidth, height - offsetHeight)
+    }
+
     internal fun setBackground(backgroundImageBytes: ByteArray?) {
-        this.backgroundImageBytes = if (backgroundImageBytes?.isEmpty() == true) null else backgroundImageBytes
+        this.backgroundImage =
+            if (backgroundImageBytes?.isEmpty() == true) null
+            else backgroundImageBytes?.let { BitmapFactory.decodeByteArray(it, 0, it.size) }
     }
 
     private fun drawWave(canvas: Canvas, zonedDateTime: ZonedDateTime, screenWidth: Float, screenHeight: Float, moonAge: Float, isAmbient: Boolean) {
